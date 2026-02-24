@@ -1,7 +1,7 @@
 // ==========================================
 // CONFIG
 // ==========================================
-const SUPABASE_URL = 'https://iyaqyoxezkovuusooomgf.supabase.co';
+const SUPABASE_URL = 'https://iyaqyoxezkovuusoomgf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5YXF5b3hlemtvdnV1c29vbWdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTM3NDcsImV4cCI6MjA4NzUyOTc0N30.9dja2T1r2AlgytvQWuQO2exoGTdPcIVM0VQXp1MWB7Q';
 
 const STRIPE_LINKS = {
