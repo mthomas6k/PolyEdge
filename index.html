@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PolyEdge — Polymarket Prop Firm</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<nav>
+  <div class="nav-logo" onclick="showPage('home')"><span class="dot"></span>POLYEDGE</div>
+  <div class="nav-links">
+    <a class="active" data-page="home">Home</a>
+    <a data-page="challenges">Challenges</a>
+    <a data-page="rules">Rules</a>
+    <a data-page="dashboard" class="auth-only">Dashboard</a>
+    <a data-page="leaderboard">Leaderboard</a>
+    <a data-page="admin" class="admin-only">Admin</a>
+    <a data-page="faq">FAQ</a>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-user"></span>
+    <button class="nav-cta" id="nav-auth-btn" data-page="login">Sign In</button>
+    <button class="nav-cta ghost" id="nav-logout-btn" style="display:none" onclick="logout()">Logout</button>
+  </div>
+</nav>
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-tag">The first prediction market prop firm</div>
+    <h1>Get Funded to Trade<br><span>Polymarket</span></h1>
+    <p>Prove your edge. Pass the evaluation. Trade with our capital. Keep 80% of the profits. No risk to your own money.</p>
+    <div class="hero-buttons">
+      <button class="btn btn-primary" data-page="challenges">View Challenges →</button>
+      <button class="btn btn-ghost" data-page="rules">How It Works</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-tag">How It Works</div>
+    <h2>Three steps to funded trading</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">01</div><h3>Choose a Challenge</h3><p>Pick a one-step or two-step evaluation. Choose your account size — $500, $1,000, or $2,000. Pay the one-time fee.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>Pass the Evaluation</h3><p>Hit the profit target while staying within the 6% drawdown limit and meeting the consistency rule.</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Get Funded</h3><p>Trade with our capital. Keep 80% of your profits. 1% commission per trade. Withdraw when you're ready.</p></div>
+    </div>
+  </div>
+  <footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer>
+</div>
+<div class="page" id="page-challenges">
+  <div class="section">
+    <div class="section-tag">Choose Your Challenge</div>
+    <h2>One-step or two-step evaluation</h2>
+    <div class="challenge-toggle"><button class="active" id="t1">One Step</button><button id="t2">Two Step</button></div>
+    <div class="challenge-set active" id="s1">
+      <div class="challenge-card"><div class="ch-header"><div class="ch-size">$500</div><div class="ch-label">One-Step Evaluation</div><div class="ch-price">$79 <span>one-time</span></div></div><div class="ch-body"><div class="ch-row"><span class="l">Profit Target</span><span class="v">10% — $50</span></div><div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6% — $30</span></div><div class="ch-row"><span class="l">Time Limit</span><span class="v">30 days</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">5</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">20%</span></div><div class="ch-row"><span class="l">Commission</span><span class="v">1%</span></div><div class="ch-row"><span class="l">Profit Split</span><span class="v">80 / 20</span></div><a class="ch-btn" onclick="startChallenge('1step','500')">Start Challenge →</a></div></div>
+      <div class="challenge-card feat"><div class="ch-header"><div class="ch-size">$1,000</div><div class="ch-label">One-Step Evaluation</div><div class="ch-price">$139 <span>one-time</span></div></div><div class="ch-body"><div class="ch-row"><span class="l">Profit Target</span><span class="v">10% — $100</span></div><div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6% — $60</span></div><div class="ch-row"><span class="l">Time Limit</span><span class="v">30 days</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">5</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">20%</span></div><div class="ch-row"><span class="l">Commission</span><span class="v">1%</span></div><div class="ch-row"><span class="l">Profit Split</span><span class="v">80 / 20</span></div><a class="ch-btn" onclick="startChallenge('1step','1000')">Start Challenge →</a></div></div>
+      <div class="challenge-card"><div class="ch-header"><div class="ch-size">$2,000</div><div class="ch-label">One-Step Evaluation</div><div class="ch-price">$199 <span>one-time</span></div></div><div class="ch-body"><div class="ch-row"><span class="l">Profit Target</span><span class="v">10% — $200</span></div><div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6% — $120</span></div><div class="ch-row"><span class="l">Time Limit</span><span class="v">30 days</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">5</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">20%</span></div><div class="ch-row"><span class="l">Commission</span><span class="v">1%</span></div><div class="ch-row"><span class="l">Profit Split</span><span class="v">80 / 20</span></div><a class="ch-btn" onclick="startChallenge('1step','2000')">Start Challenge →</a></div></div>
+    </div>
+    <div class="challenge-set" id="s2">
+      <div class="challenge-card"><div class="ch-header"><div class="ch-size">$500</div><div class="ch-label">Two-Step Evaluation</div><div class="ch-price">$59 <span>one-time</span></div></div><div class="ch-body"><div class="phase-label">Phase 1 — 30 Days</div><div class="ch-row"><span class="l">Profit Target</span><span class="v">6% — $30</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">2</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">50%</span></div><div class="phase-label">Phase 2 — 30 Days</div><div class="ch-row"><span class="l">Profit Target</span><span class="v">4% — $20</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">2</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">50%</span></div><div class="phase-label">Both Phases</div><div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6% — $30</span></div><div class="ch-row"><span class="l">Commission</span><span class="v">1%</span></div><div class="ch-row"><span class="l">Profit Split</span><span class="v">80 / 20</span></div><a class="ch-btn" onclick="startChallenge('2step','500')">Start Challenge →</a></div></div>
+      <div class="challenge-card feat"><div class="ch-header"><div class="ch-size">$1,000</div><div class="ch-label">Two-Step Evaluation</div><div class="ch-price">$119 <span>one-time</span></div></div><div class="ch-body"><div class="phase-label">Phase 1 — 30 Days</div><div class="ch-row"><span class="l">Profit Target</span><span class="v">6% — $60</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">2</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">50%</span></div><div class="phase-label">Phase 2 — 30 Days</div><div class="ch-row"><span class="l">Profit Target</span><span class="v">4% — $40</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">2</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">50%</span></div><div class="phase-label">Both Phases</div><div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6% — $60</span></div><div class="ch-row"><span class="l">Commission</span><span class="v">1%</span></div><div class="ch-row"><span class="l">Profit Split</span><span class="v">80 / 20</span></div><a class="ch-btn" onclick="startChallenge('2step','1000')">Start Challenge →</a></div></div>
+      <div class="challenge-card"><div class="ch-header"><div class="ch-size">$2,000</div><div class="ch-label">Two-Step Evaluation</div><div class="ch-price">$179 <span>one-time</span></div></div><div class="ch-body"><div class="phase-label">Phase 1 — 30 Days</div><div class="ch-row"><span class="l">Profit Target</span><span class="v">6% — $120</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">2</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">50%</span></div><div class="phase-label">Phase 2 — 30 Days</div><div class="ch-row"><span class="l">Profit Target</span><span class="v">4% — $80</span></div><div class="ch-row"><span class="l">Min Trades</span><span class="v">2</span></div><div class="ch-row"><span class="l">Consistency</span><span class="v">50%</span></div><div class="phase-label">Both Phases</div><div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6% — $120</span></div><div class="ch-row"><span class="l">Commission</span><span class="v">1%</span></div><div class="ch-row"><span class="l">Profit Split</span><span class="v">80 / 20</span></div><a class="ch-btn" onclick="startChallenge('2step','2000')">Start Challenge →</a></div></div>
+    </div>
+  </div>
+  <footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer>
+</div>
+<div class="page" id="page-rules">
+  <div class="section">
+    <div class="section-tag">Evaluation Rules</div>
+    <h2>Know the rules before you start</h2>
+    <div class="rules-container">
+      <div class="rule-block"><h3><span class="n">1</span> One-Step Evaluation</h3><table class="rt"><tr><td>Profit Target</td><td>10%</td></tr><tr><td>Max Drawdown</td><td>6% trailing</td></tr><tr><td>Time Limit</td><td>30 calendar days</td></tr><tr><td>Minimum Trades</td><td>5</td></tr><tr><td>Consistency Rule</td><td>20% — no single trade > 20% of total profit</td></tr></table></div>
+      <div class="rule-block"><h3><span class="n">2</span> Two-Step Evaluation</h3><table class="rt"><tr><td>Phase 1 Target</td><td>6%</td></tr><tr><td>Phase 2 Target</td><td>4%</td></tr><tr><td>Max Drawdown (both)</td><td>6% trailing</td></tr><tr><td>Time (each phase)</td><td>30 calendar days</td></tr><tr><td>Min Trades (each)</td><td>2</td></tr><tr><td>Consistency (both)</td><td>50% per phase</td></tr></table></div>
+      <div class="rule-block"><h3><span class="n">3</span> Pricing</h3><table class="rt"><tr><td>$500 One-Step</td><td>$79</td></tr><tr><td>$1,000 One-Step</td><td>$139</td></tr><tr><td>$2,000 One-Step</td><td>$199</td></tr><tr><td>$500 Two-Step</td><td>$59</td></tr><tr><td>$1,000 Two-Step</td><td>$119</td></tr><tr><td>$2,000 Two-Step</td><td>$179</td></tr></table></div>
+      <div class="rule-block"><h3><span class="n">4</span> Commission & Splits</h3><table class="rt"><tr><td>Commission</td><td>1% per trade</td></tr><tr><td>Profit Split</td><td>80% trader / 20% firm</td></tr><tr><td>Withdrawal min</td><td>$50</td></tr><tr><td>Withdrawal cycle</td><td>Bi-weekly</td></tr><tr><td>Scaling</td><td>+25% after 3 profitable months</td></tr></table></div>
+    </div>
+  </div>
+  <footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer>
+</div>
+<div class="page" id="page-dashboard"><div id="dash-content"></div><footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer></div>
+<div class="page" id="page-leaderboard"><div class="section"><div class="section-tag">Funded Traders</div><h2>Leaderboard</h2><div id="lb-content"><p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p></div></div><footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer></div>
+<div class="page" id="page-admin">
+  <div class="section">
+    <div class="section-tag">Admin Panel</div><h2>Manage Platform</h2>
+    <div class="admin-tabs"><button class="active" onclick="showAdminTab('users')">Users</button><button onclick="showAdminTab('evals')">Evaluations</button><button onclick="showAdminTab('create')">Create Eval</button></div>
+    <div class="admin-section active" id="admin-users"></div>
+    <div class="admin-section" id="admin-evals"></div>
+    <div class="admin-section" id="admin-create"><div class="dp" style="max-width:500px"><h3 style="font-family:var(--mono);font-size:13px;color:var(--accent);margin-bottom:20px;text-transform:uppercase;letter-spacing:1px">Create Evaluation</h3><div class="msg msg-err" id="admin-create-err"></div><div class="msg msg-ok" id="admin-create-ok"></div><div class="form-group"><label class="form-label">User Email</label><input class="form-input" id="ac-email" placeholder="user@email.com"></div><div class="form-row"><div class="form-group"><label class="form-label">Type</label><select class="form-select" id="ac-type"><option value="1-step">One-Step</option><option value="2-step">Two-Step</option></select></div><div class="form-group"><label class="form-label">Account Size</label><select class="form-select" id="ac-size"><option value="500">$500</option><option value="1000">$1,000</option><option value="2000">$2,000</option></select></div></div><button class="form-btn" onclick="adminCreateEval()">Create Evaluation</button></div></div>
+  </div>
+  <footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer>
+</div>
+<div class="page" id="page-faq">
+  <div class="section"><div class="section-tag">Frequently Asked</div><h2>FAQ</h2>
+    <div class="faq-container">
+      <div class="faq-item"><div class="faq-q">What's the difference between one-step and two-step? <span class="arrow">+</span></div><div class="faq-a">One-step: single phase, 10% target, 5 min trades, 20% consistency, 30 days. Two-step: two phases (6% then 4%), 2 min trades per phase, 50% consistency per phase, 30 days each. Two-step is $20 cheaper. Both have 6% max drawdown and 1% commission.</div></div>
+      <div class="faq-item"><div class="faq-q">What is the consistency rule? <span class="arrow">+</span></div><div class="faq-a">Prevents passing on one lucky trade. One-step: no trade > 20% of total profit. Two-step: no trade > 50% of phase profit. Proves repeatable edge.</div></div>
+      <div class="faq-item"><div class="faq-q">How does drawdown work? <span class="arrow">+</span></div><div class="faq-a">6% trailing from high-water mark. Includes unrealized positions. Breach = instant fail. Repurchase any time.</div></div>
+      <div class="faq-item"><div class="faq-q">What happens if I fail? <span class="arrow">+</span></div><div class="faq-a">Repurchase immediately. No waiting. Many funded traders failed first.</div></div>
+      <div class="faq-item"><div class="faq-q">How do payouts work? <span class="arrow">+</span></div><div class="faq-a">80/20 split. Bi-weekly withdrawals, $50 min. Processed within 48 hours.</div></div>
+      <div class="faq-item"><div class="faq-q">What's the scaling plan? <span class="arrow">+</span></div><div class="faq-a">+25% capital after 3 consecutive profitable months. No cap.</div></div>
+    </div>
+  </div>
+  <footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer>
+</div>
+<div class="page" id="page-login">
+  <div class="auth-box" id="auth-login"><h2>Sign In</h2><div class="sub">Access your evaluation account</div><div class="msg msg-err" id="login-err"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="login-email" type="email" placeholder="trader@email.com"></div><div class="form-group"><label class="form-label">Password</label><input class="form-input" id="login-pass" type="password" placeholder="••••••••"></div><button class="form-btn" onclick="login()">Sign In →</button><div class="auth-toggle">Don't have an account? <a onclick="toggleAuth('register')">Create one</a></div></div>
+  <div class="auth-box" id="auth-register" style="display:none"><h2>Create Account</h2><div class="sub">Start your trading journey</div><div class="msg msg-err" id="reg-err"></div><div class="msg msg-ok" id="reg-ok"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="reg-email" type="email" placeholder="trader@email.com"></div><div class="form-group"><label class="form-label">Password</label><input class="form-input" id="reg-pass" type="password" placeholder="Min 6 characters"></div><div class="form-group"><label class="form-label">Confirm Password</label><input class="form-input" id="reg-pass2" type="password" placeholder="••••••••"></div><button class="form-btn" onclick="register()">Create Account →</button><div class="auth-toggle">Already have an account? <a onclick="toggleAuth('login')">Sign in</a></div></div>
+</div>
+<div class="modal-bg" id="trade-modal"><div class="modal"><button class="modal-close" onclick="closeModal('trade-modal')">✕</button><h3>Open Trade</h3><div class="msg msg-err" id="trade-err"></div><div class="form-group"><label class="form-label">Contract Name</label><input class="form-input" id="tr-name" placeholder="e.g. Fed Rate Hold Jun 2026"></div><div class="form-row"><div class="form-group"><label class="form-label">Side</label><select class="form-select" id="tr-side"><option value="YES">YES</option><option value="NO">NO</option></select></div><div class="form-group"><label class="form-label">Size ($)</label><input class="form-input" id="tr-size" type="number" placeholder="50"></div></div><div class="form-group"><label class="form-label">Entry Price (¢)</label><input class="form-input" id="tr-entry" type="number" step="0.1" placeholder="e.g. 72.5"></div><button class="form-btn" onclick="openTrade()">Open Trade</button></div></div>
+<div class="modal-bg" id="close-modal"><div class="modal"><button class="modal-close" onclick="closeModal('close-modal')">✕</button><h3>Close Trade</h3><div class="msg msg-err" id="close-err"></div><p id="close-info" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:16px"></p><div class="form-group"><label class="form-label">Exit Price (¢)</label><input class="form-input" id="cl-exit" type="number" step="0.1" placeholder="e.g. 85.0"></div><button class="form-btn" onclick="closeTrade()">Close Trade</button></div></div>
+<script src="app.js"></script>
+</body>
+</html>
