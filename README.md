@@ -1,2 +1,0 @@
-# PolyEdge
-Propfirm
