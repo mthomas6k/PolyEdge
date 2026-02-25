@@ -398,20 +398,81 @@ function showAdminTab(tab) {
 }
 
 // ==========================================
-// STRIPE
+// MOCK CHECKOUT
 // ==========================================
+const PRICES = {
+  '1step-500': 79, '1step-1000': 139, '1step-2000': 199,
+  '2step-500': 59, '2step-1000': 119, '2step-2000': 179,
+};
+
 function startChallenge(type, size) {
-  const key = type + '-' + size;
-  const link = STRIPE_LINKS[key];
-  if (link && !link.startsWith('STRIPE_LINK')) {
-    window.location.href = link;
-  } else {
-    if (!currentUser) {
-      showPage('login');
-    } else {
-      alert('Payment links not configured yet. Contact admin to activate your evaluation.');
-    }
+  if (!currentUser) { showPage('login'); return; }
+  if (activeEval && (activeEval.status === 'active' || activeEval.status === 'funded')) {
+    if (!confirm('You already have an active evaluation. Purchase another?')) return;
   }
+  const key = type + '-' + size;
+  const price = PRICES[key] || 99;
+  const label = (type === '1step' ? 'One-Step' : 'Two-Step') + ' $' + Number(size).toLocaleString();
+  document.getElementById('mc-label').textContent = label;
+  document.getElementById('mc-price').textContent = '$' + price;
+  document.getElementById('mc-type').value = type;
+  document.getElementById('mc-size').value = size;
+  document.getElementById('mc-card').value = '';
+  document.getElementById('mc-expiry').value = '';
+  document.getElementById('mc-cvv').value = '';
+  document.getElementById('mc-err').style.display = 'none';
+  document.getElementById('mc-btn').textContent = 'Pay $' + price + ' →';
+  document.getElementById('mc-btn').disabled = false;
+  openModal('mock-checkout-modal');
+}
+
+async function submitMockPayment() {
+  const card   = document.getElementById('mc-card').value.replace(/\s/g, '');
+  const expiry = document.getElementById('mc-expiry').value.trim();
+  const cvv    = document.getElementById('mc-cvv').value.trim();
+  const errEl  = document.getElementById('mc-err');
+  errEl.style.display = 'none';
+  if (card.length < 12)      { showMsg(errEl, 'Enter a valid card number', 'err'); return; }
+  if (!expiry.includes('/')) { showMsg(errEl, 'Enter expiry as MM/YY', 'err'); return; }
+  if (cvv.length < 3)        { showMsg(errEl, 'Enter a valid CVV', 'err'); return; }
+  const btn = document.getElementById('mc-btn');
+  btn.textContent = 'Processing…';
+  btn.disabled = true;
+  await new Promise(r => setTimeout(r, 1400));
+  const type = document.getElementById('mc-type').value;
+  const size = parseInt(document.getElementById('mc-size').value);
+  const isOneStep    = type === '1step';
+  const profitTarget = isOneStep ? 10 : 6;
+  const consistency  = isOneStep ? 20 : 50;
+  const minTrades    = isOneStep ? 5 : 2;
+  const { error } = await sb.from('evaluations').insert({
+    user_id:              currentUser.id,
+    eval_type:            isOneStep ? '1-step' : '2-step',
+    account_size:         size,
+    phase:                1,
+    status:               'active',
+    starting_balance:     size,
+    balance:              size,
+    high_water_mark:      size,
+    profit_target_pct:    profitTarget,
+    max_drawdown_pct:     6,
+    consistency_rule_pct: consistency,
+    min_trades:           minTrades,
+    trades_count:         0,
+    total_profit:         0,
+    total_loss:           0,
+    largest_trade_profit: 0,
+    expires_at:           new Date(Date.now() + 30 * 86400000).toISOString(),
+  });
+  if (error) {
+    showMsg(errEl, error.message, 'err');
+    btn.textContent = 'Pay $' + PRICES[type + '-' + size] + ' →';
+    btn.disabled = false;
+    return;
+  }
+  closeModal('mock-checkout-modal');
+  await checkSession();
+  showPage('dashboard');
 }
 
 // ==========================================
