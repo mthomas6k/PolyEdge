@@ -23,6 +23,7 @@
       <a data-page="leaderboard">Leaderboard</a>
       <a data-page="analytics">Analytics</a>
       <a data-page="dashboard" class="auth-only">Dashboard</a>
+      <a data-page="accounts" class="auth-only">Accounts</a>
       <a data-page="admin" class="admin-only">Admin</a>
     </div>
     <div class="nav-right">
@@ -36,10 +37,26 @@
   <div id="page-home" class="page active">
     <div class="hero">
       <div class="hero-tag">Prediction Market Prop Trading</div>
-      <h1>Prove Your <span>Edge</span>.<br>Get Funded.</h1>
+      <h1 class="hero-headline">Prove Your <span>Edge</span>.<br>Get Funded.</h1>
       <p>Trade Polymarket with our capital. Pass the evaluation, prove consistency, and scale up to a funded account with real USDC.</p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-counter" data-target="80" data-suffix="%" data-decimals="0">0%</div>
+          <div class="hero-stat-label">Profit Split</div>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <div class="stat-counter" data-target="2000" data-prefix="$" data-decimals="0">$0</div>
+          <div class="hero-stat-label">Max Account Size</div>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <div class="stat-counter" data-target="30" data-suffix=" days" data-decimals="0">0 days</div>
+          <div class="hero-stat-label">Time Limit</div>
+        </div>
+      </div>
       <div class="hero-buttons">
-        <button class="btn btn-primary" data-page="challenges">View Challenges →</button>
+        <button class="btn btn-primary hero-cta-animated" data-page="challenges">View Challenges →</button>
         <button class="btn btn-ghost" data-page="rules">How It Works</button>
       </div>
     </div>
@@ -288,6 +305,110 @@
     <footer>© 2025 PolyProp — All Rights Reserved</footer>
   </div>
 
+  <!-- ========== ACCOUNTS ========== -->
+  <div id="page-accounts" class="page">
+    <div id="accounts-content" style="padding:20px">
+      <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
+    </div>
+    <footer>© 2025 PolyProp — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== CERTIFICATE ========== -->
+  <div id="page-certificate" class="page">
+    <div class="section" style="text-align:center">
+      <div class="cert-wrapper">
+        <div class="cert-card">
+          <div class="cert-glow"></div>
+          <div class="cert-inner">
+            <div class="cert-logo">◎ POLYPROP</div>
+            <div class="cert-divider"></div>
+            <div class="cert-title">CERTIFICATE OF ACHIEVEMENT</div>
+            <div class="cert-subtitle">THE EVALUATION STAGE</div>
+            <div class="cert-phase">PHASE I</div>
+            <div class="cert-date">DATE: <span id="cert-date-val">—</span></div>
+            <div class="cert-presented">PROUDLY PRESENTED TO</div>
+            <div class="cert-name" id="cert-name-val">TRADER NAME</div>
+            <div class="cert-footer">
+              <div class="cert-brand">◎ PolyProp</div>
+              <div class="cert-qr">
+                <div class="cert-qr-placeholder">
+                  <svg width="64" height="64" viewBox="0 0 64 64"><rect x="0" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="0" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="0" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="16" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="32" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="0" y="44" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cert-actions">
+          <button class="cert-dl-btn" onclick="alert('Download feature coming soon')">↓ PNG</button>
+          <button class="cert-dl-btn" onclick="alert('Download feature coming soon')">↓ PDF</button>
+          <button class="cert-dl-btn" onclick="alert('Copy feature coming soon')">⊡ Image</button>
+          <button class="cert-dl-btn" onclick="alert('Link feature coming soon')">↗ Link</button>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyProp — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== EDUCATION ========== -->
+  <div id="page-education" class="page">
+    <div class="section edu-section">
+      <div class="section-tag">Learn</div>
+      <h2>What Are Prediction-Based Markets?</h2>
+
+      <div class="edu-content">
+        <div class="edu-block">
+          <div class="edu-num">01</div>
+          <h3>What Are Prediction Markets?</h3>
+          <p>Prediction markets are exchange-traded markets where participants buy and sell contracts that pay out based on the outcome of future events. Each contract resolves to $1.00 if the event occurs and $0.00 if it doesn't. The current trading price represents the market's collective estimate of the probability of that event happening.</p>
+          <p>For example, if a contract "Will X happen by December?" trades at $0.65, the market collectively estimates a 65% probability of that event occurring.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">02</div>
+          <h3>How They Work</h3>
+          <p>Participants trade binary outcome contracts on a prediction market exchange. You can buy "Yes" shares if you believe the event will happen, or "No" shares if you believe it won't. Prices fluctuate between $0.01 and $0.99 based on supply and demand, reflecting the market's evolving probability estimate.</p>
+          <p>When the event resolves, winning shares pay out $1.00 each, and losing shares expire worthless. Your profit is the difference between your entry price and the $1.00 payout, minus any trading fees.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">03</div>
+          <h3>Risk Profile</h3>
+          <p>Prediction markets carry defined risk. When you buy a contract at $0.65, your maximum loss is the $0.65 you paid, and your maximum profit is $0.35 (the $1.00 payout minus your cost). This binary structure means you always know your worst-case scenario before entering a position.</p>
+          <p>However, prices can move against you before resolution, creating unrealized losses. Position sizing and portfolio diversification are critical risk management tools.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">04</div>
+          <h3>Expected Value</h3>
+          <p>Profitable prediction market trading is fundamentally about finding mispriced contracts — situations where the true probability of an event differs from the price the market assigns. If you believe an event has a 75% chance of occurring but the market prices it at 60%, buying that contract has positive expected value.</p>
+          <p>Expected value (EV) = (Probability × Payout) − Cost. Consistent profitability requires disciplined analysis and a systematic approach to identifying edge.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">05</div>
+          <h3>Market Inefficiencies</h3>
+          <p>Prediction markets, like all markets, can be inefficient. Inefficiencies arise from information asymmetry, behavioral biases (overconfidence, anchoring, recency bias), liquidity imbalances, and delayed reactions to breaking information. These inefficiencies create opportunities for informed traders.</p>
+          <p>Common patterns include slow price adjustments after news events, overreaction to unlikely tail risks, and systematic mispricing in niche or low-volume markets.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">06</div>
+          <h3>How Traders Profit</h3>
+          <p>Successful prediction market traders combine deep domain expertise with disciplined risk management. They analyze events using primary sources, statistical models, and domain-specific knowledge to develop independent probability estimates. When those estimates diverge meaningfully from market prices, they trade.</p>
+          <p>Key principles include diversifying across uncorrelated events, sizing positions according to confidence level, and continuously updating probability estimates as new information emerges.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">07</div>
+          <h3>Potential Upside</h3>
+          <p>Prediction markets are a rapidly growing asset class with expanding coverage across politics, economics, sports, technology, and current events. As these markets mature, liquidity deepens and the range of tradable events expands.</p>
+          <p>For skilled analysts with domain expertise, prediction markets offer a unique opportunity to monetize knowledge and analytical ability. Unlike traditional financial markets, prediction markets reward subject-matter expertise directly — if you understand politics, science, technology, or any other domain better than the average market participant, you have a structural edge.</p>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyProp — All Rights Reserved</footer>
+  </div>
+
   <!-- ========== LOGIN ========== -->
   <div id="page-login" class="page">
     <div id="auth-login">
@@ -426,6 +547,35 @@
     </div>
   </div>
 
+  <!-- Bet from Dashboard Modal -->
+  <div class="modal-bg" id="market-bet-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('market-bet-modal')">✕</button>
+      <h3>Place Bet</h3>
+      <div class="msg msg-err" id="mbet-err"></div>
+      <p id="mbet-market-info" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:16px"></p>
+      <input type="hidden" id="mbet-market-name">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Side</label>
+          <select class="form-select" id="mbet-side">
+            <option value="YES">YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Entry Price (¢)</label>
+          <input class="form-input" id="mbet-entry" type="number" min="1" max="99">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Trade Size ($)</label>
+        <input class="form-input" id="mbet-size" type="number" placeholder="e.g. 50" min="1">
+      </div>
+      <button class="form-btn" onclick="placeDashboardBet()">Place Bet →</button>
+    </div>
+  </div>
+
   <!-- Mock Checkout Modal -->
   <div class="modal-bg" id="mock-checkout-modal">
     <div class="modal">
@@ -457,12 +607,39 @@
     </div>
   </div>
 
+  <!-- ========== BOTTOM NAVIGATION ========== -->
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-inner">
+      <div class="bottom-nav-group">
+        <span class="bottom-nav-label">Navigate</span>
+        <a data-page="home">Home</a>
+        <a data-page="challenges">Challenges</a>
+        <a data-page="rules">Rules</a>
+        <a data-page="leaderboard">Leaderboard</a>
+        <a data-page="analytics">Analytics</a>
+        <a data-page="dashboard" class="auth-only">Dashboard</a>
+        <a data-page="accounts" class="auth-only">Accounts</a>
+      </div>
+      <div class="bottom-nav-group">
+        <span class="bottom-nav-label">Resources</span>
+        <a data-page="certificate">Certificate</a>
+        <a data-page="education">Prediction Markets</a>
+      </div>
+      <div class="bottom-nav-group">
+        <span class="bottom-nav-label">PolyProp</span>
+        <span class="bottom-nav-copy">© 2025 PolyProp</span>
+        <span class="bottom-nav-copy">All Rights Reserved</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ========== SCRIPTS ========== -->
-  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <!-- Analytics engine (must load BEFORE app.js since app.js calls loadAnalytics) -->
+  <script src="js/polymarketService.js"></script>
+  <script src="js/calendarComponent.js"></script>
+  <script src="js/accountManager.js"></script>
+  <script src="js/homepageAnimations.js"></script>
   <script src="js/analytics.js"></script>
-  <!-- Main app -->
   <script src="js/app.js"></script>
 
 </body>
