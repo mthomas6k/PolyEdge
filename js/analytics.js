@@ -149,31 +149,6 @@ async function loadAnalytics() {
     storedWallet = localStorage.getItem('pp_pm_wallet') || null;
   } catch (e) {}
 
-  // #region agent log
-  try {
-    fetch('http://127.0.0.1:7937/ingest/20f2f95c-d4ad-41f6-9457-aa0c14ae1c6f', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': 'a1847e'
-      },
-      body: JSON.stringify({
-        sessionId: 'a1847e',
-        runId: 'pre-fix',
-        hypothesisId: 'H3',
-        location: 'js/analytics.js:146',
-        message: 'loadAnalytics wallet sources',
-        data: {
-          analyticsWalletCurrent: analyticsWallet,
-          profileWallet,
-          storedWallet
-        },
-        timestamp: Date.now()
-      })
-    }).catch(() => {});
-  } catch (e) {}
-  // #endregion
-
   if (!analyticsWallet) {
     analyticsWallet = profileWallet || storedWallet || null;
   }
@@ -220,27 +195,6 @@ async function connectWallet() {
   try {
     localStorage.setItem('pp_pm_wallet', wallet);
   } catch (e) {}
-
-  // #region agent log
-  try {
-    fetch('http://127.0.0.1:7937/ingest/20f2f95c-d4ad-41f6-9457-aa0c14ae1c6f', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': 'a1847e'
-      },
-      body: JSON.stringify({
-        sessionId: 'a1847e',
-        runId: 'pre-fix',
-        hypothesisId: 'H4',
-        location: 'js/analytics.js:217',
-        message: 'connectWallet saved',
-        data: { walletTail: wallet.slice(-6) },
-        timestamp: Date.now()
-      })
-    }).catch(() => {});
-  } catch (e) {}
-  // #endregion
 
   if (typeof currentUser !== 'undefined' && currentUser && typeof sb !== 'undefined' && sb) {
     try {
