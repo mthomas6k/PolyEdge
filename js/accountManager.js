@@ -145,3 +145,4 @@ const AccountManager = (() => {
     getStatusBadge
   };
 })();
+
