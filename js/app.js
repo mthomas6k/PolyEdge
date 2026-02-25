@@ -28,6 +28,29 @@ async function checkSession() {
   if (!sb) { updateAuthUI(false); return; }
   try {
     const { data: { session } } = await sb.auth.getSession();
+
+    // #region agent log
+    fetch('http://127.0.0.1:7937/ingest/20f2f95c-d4ad-41f6-9457-aa0c14ae1c6f', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'a1847e'
+      },
+      body: JSON.stringify({
+        sessionId: 'a1847e',
+        runId: 'pre-fix',
+        hypothesisId: 'H1',
+        location: 'js/app.js:31',
+        message: 'checkSession result',
+        data: {
+          hasSession: !!session,
+          userId: session?.user?.id || null
+        },
+        timestamp: Date.now()
+      })
+    }).catch(() => {});
+    // #endregion
+
     if (session) {
       currentUser = session.user;
       await loadProfile();
@@ -57,8 +80,62 @@ function updateAuthUI(loggedIn) {
   const authBtn = document.getElementById('nav-auth-btn');
   const logoutBtn = document.getElementById('nav-logout-btn');
 
-  document.querySelectorAll('.auth-only').forEach(el => el.style.display = loggedIn ? '' : 'none');
-  document.querySelectorAll('.admin-only').forEach(el => el.style.display = (loggedIn && currentProfile?.is_admin) ? '' : 'none');
+  const authEls = document.querySelectorAll('.auth-only');
+  const adminEls = document.querySelectorAll('.admin-only');
+
+  authEls.forEach(el => {
+    if (!loggedIn) {
+      el.style.display = 'none';
+      return;
+    }
+    // Top nav vs bottom nav
+    if (el.closest('.bottom-nav')) {
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'inline-block';
+    }
+  });
+
+  adminEls.forEach(el => {
+    const shouldShow = loggedIn && currentProfile?.is_admin;
+    if (!shouldShow) {
+      el.style.display = 'none';
+      return;
+    }
+    if (el.closest('.bottom-nav')) {
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'inline-block';
+    }
+  });
+
+  // #region agent log
+  try {
+    const sample = authEls[0] || null;
+    const sampleDisplay = sample ? window.getComputedStyle(sample).display : null;
+    fetch('http://127.0.0.1:7937/ingest/20f2f95c-d4ad-41f6-9457-aa0c14ae1c6f', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': 'a1847e'
+      },
+      body: JSON.stringify({
+        sessionId: 'a1847e',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+        location: 'js/app.js:60',
+        message: 'updateAuthUI applied',
+        data: {
+          loggedIn,
+          authCount: authEls.length,
+          adminCount: adminEls.length,
+          sampleDisplay
+        },
+        timestamp: Date.now()
+      })
+    }).catch(() => {});
+  } catch (e) {}
+  // #endregion
 
   if (loggedIn && navUser) {
     navUser.textContent = currentProfile?.display_name || currentUser?.email?.split('@')[0] || 'User';
@@ -155,7 +232,7 @@ async function loadDashboard() {
     await AccountManager.loadAccounts();
     const acct = AccountManager.getSelected();
     if (!acct) {
-      container.innerHTML = '<div class="empty-state"><h3>No Active Evaluation</h3><p>Start a challenge to begin your funded trading journey.</p><button class="btn btn-primary" data-page="challenges">View Challenges →</button></div>';
+      container.innerHTML = '<div class="empty-state"><h3>No Active Evaluation</h3><p>Start a challenge to begin your funded betting journey.</p><button class="btn btn-primary" data-page="challenges">View Challenges →</button></div>';
       bindDataPage();
       return;
     }
