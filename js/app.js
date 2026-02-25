@@ -32,6 +32,9 @@ async function checkSession() {
       currentUser = session.user;
       await loadProfile();
       updateAuthUI(true);
+      // Load accounts after auth
+      await AccountManager.loadAccounts();
+      AccountManager.restoreSelection();
     } else {
       updateAuthUI(false);
     }
@@ -104,7 +107,7 @@ async function register() {
       if (session) {
         await sb.from('profiles').update({ polymarket_wallet: wallet }).eq('id', session.user.id);
       }
-    } catch(e) { /* non-critical */ }
+    } catch(e) {}
   }
 
   showMsg(okEl, 'Account created! You can now sign in.', 'ok');
@@ -133,7 +136,7 @@ function showMsg(el, text, type) {
 }
 
 // ==========================================
-// DASHBOARD
+// DASHBOARD — Now with Polymarket Live Markets
 // ==========================================
 async function loadDashboard() {
   const container = document.getElementById('dash-content');
@@ -145,33 +148,51 @@ async function loadDashboard() {
     return;
   }
 
-  const { data: evals } = await sb.from('evaluations').select('*').eq('user_id', currentUser.id).in('status', ['active', 'funded']).order('created_at', { ascending: false }).limit(1);
-
-  if (!evals || evals.length === 0) {
-    container.innerHTML = '<div class="empty-state"><h3>No Active Evaluation</h3><p>Start a challenge to begin your funded trading journey.</p><button class="btn btn-primary" data-page="challenges">View Challenges →</button></div>';
-    bindDataPage();
-    return;
+  // Use AccountManager's selected account
+  const selectedAccount = AccountManager.getSelected();
+  if (!selectedAccount) {
+    // Try loading accounts first
+    await AccountManager.loadAccounts();
+    const acct = AccountManager.getSelected();
+    if (!acct) {
+      container.innerHTML = '<div class="empty-state"><h3>No Active Evaluation</h3><p>Start a challenge to begin your funded trading journey.</p><button class="btn btn-primary" data-page="challenges">View Challenges →</button></div>';
+      bindDataPage();
+      return;
+    }
+    activeEval = acct;
+  } else {
+    activeEval = selectedAccount;
   }
 
-  activeEval = evals[0];
   const e = activeEval;
+
+  // Fetch trades for this evaluation
   const { data: trades } = await sb.from('trades').select('*').eq('evaluation_id', e.id).order('opened_at', { ascending: false });
+
+  // *** FIXED BET CATEGORIZATION ***
+  // Open bets: status === 'open' (active, not resolved, still exposed to market)
+  // Closed bets: status === 'closed' (resolved, outcome determined, P&L finalized)
   const openTrades = (trades || []).filter(t => t.status === 'open');
   const closedTrades = (trades || []).filter(t => t.status === 'closed');
 
   const daysUsed = Math.floor((Date.now() - new Date(e.created_at).getTime()) / 86400000);
   const daysTotal = Math.floor((new Date(e.expires_at).getTime() - new Date(e.created_at).getTime()) / 86400000);
+
+  // *** Calculate P&L from CLOSED bets only ***
+  const totalClosedPnl = closedTrades.reduce((s, t) => s + parseFloat(t.pnl || 0), 0);
   const profit = e.balance - e.starting_balance;
   const profitTarget = e.starting_balance * (e.profit_target_pct / 100);
   const ddUsed = e.high_water_mark > 0 ? ((e.high_water_mark - e.balance) / e.high_water_mark * 100) : 0;
   const ddLimit = e.max_drawdown_pct;
   const profitPct = profitTarget > 0 ? Math.min(100, (Math.max(0, profit) / profitTarget) * 100) : 0;
 
+  // Consistency calculated from CLOSED bets only
   let consistencyOk = true;
   let largestPct = 0;
-  if (e.total_profit > 0 && closedTrades.length > 0) {
+  const closedProfit = closedTrades.filter(t => t.pnl > 0).reduce((s, t) => s + t.pnl, 0);
+  if (closedProfit > 0 && closedTrades.length > 0) {
     const maxTrade = Math.max(...closedTrades.filter(t => t.pnl > 0).map(t => t.pnl), 0);
-    largestPct = (maxTrade / e.total_profit) * 100;
+    largestPct = (maxTrade / closedProfit) * 100;
     consistencyOk = largestPct <= e.consistency_rule_pct;
   }
 
@@ -187,21 +208,157 @@ async function loadDashboard() {
         <div class="dc"><div class="dc-label">Balance</div><div class="dc-val">${fmt(e.balance)}</div><div class="dc-sub">Starting: ${fmt(e.starting_balance)}</div></div>
         <div class="dc"><div class="dc-label">Profit Target</div><div class="dc-val ${profit>=0?'grn':'red'}">${fmt(Math.max(0,profit))} / ${fmt(profitTarget)}</div><div class="dc-sub">${e.profit_target_pct}% target</div><div class="progress-bar"><div class="progress-fill" style="width:${profitPct}%"></div></div></div>
         <div class="dc"><div class="dc-label">Drawdown Used</div><div class="dc-val">${ddUsed.toFixed(1)}%</div><div class="dc-sub">Max: ${ddLimit}%</div><div class="progress-bar"><div class="progress-fill" style="width:${(ddUsed/ddLimit)*100}%;${ddUsed>ddLimit*0.7?'background:var(--red)':''}"></div></div></div>
-        <div class="dc"><div class="dc-label">Trades</div><div class="dc-val">${e.trades_count} / ${e.min_trades} min</div></div>
+        <div class="dc"><div class="dc-label">Trades (Closed)</div><div class="dc-val">${closedTrades.length} / ${e.min_trades} min</div></div>
         <div class="dc"><div class="dc-label">Consistency</div><div class="dc-val ${consistencyOk?'grn':'red'}">${consistencyOk?'✓ Passing':'✕ Failing'}</div><div class="dc-sub">Largest: ${largestPct.toFixed(1)}% (max ${e.consistency_rule_pct}%)</div></div>
       </div>
       <div class="dash-main">
         <div class="dp">
           <div class="dp-header"><div class="dp-title">Open Positions</div><div style="display:flex;gap:8px"><span class="dp-badge">${openTrades.length} Active</span><button class="form-btn" style="width:auto;padding:6px 16px;font-size:10px" onclick="openModal('trade-modal')">+ New Trade</button></div></div>
-          ${openTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Commission</th><th>Action</th></tr></thead><tbody>${openTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${t.entry_price*100}¢</td><td>${fmt(t.commission)}</td><td><button class="form-btn secondary" style="width:auto;padding:4px 12px;font-size:9px" onclick="openCloseModal('${t.id}','${t.contract_name}',${t.entry_price},'${t.side}',${t.trade_size})">Close</button></td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-family:var(--mono);font-size:12px">No open positions</p>'}
+          ${openTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Commission</th><th>Action</th></tr></thead><tbody>${openTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${fmt(t.commission)}</td><td><button class="form-btn secondary" style="width:auto;padding:4px 12px;font-size:9px" onclick="openCloseModal('${t.id}','${t.contract_name}',${t.entry_price},'${t.side}',${t.trade_size})">Close</button></td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-family:var(--mono);font-size:12px">No open positions</p>'}
         </div>
         <div class="dp">
-          <div class="dp-header"><div class="dp-title">Trade History</div><span class="dp-badge">${closedTrades.length} Closed</span></div>
+          <div class="dp-header"><div class="dp-title">Trade History (Closed)</div><span class="dp-badge">${closedTrades.length} Closed</span></div>
           ${closedTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Exit</th><th>P&L</th></tr></thead><tbody>${closedTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${(t.exit_price*100).toFixed(1)}¢</td><td class="${t.pnl>=0?'pgrn':'pred'}">${t.pnl>=0?'+':''}${fmt(t.pnl)}</td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-family:var(--mono);font-size:12px">No closed trades yet</p>'}
+        </div>
+        <div class="dash-markets-section">
+          <div class="dash-markets-header">
+            <div class="dp-title">Live Polymarket Markets</div>
+            <div class="dash-markets-search">
+              <input id="market-search-input" placeholder="Search markets..." onkeyup="handleMarketSearch(event)">
+              <button class="form-btn" style="width:auto;padding:8px 16px;font-size:10px" onclick="refreshMarkets()">↻ Refresh</button>
+            </div>
+          </div>
+          <div id="markets-grid" class="market-grid">
+            <div class="market-loading"><div class="an-spinner" style="margin:0 auto 12px;width:24px;height:24px"></div>Loading markets...</div>
+          </div>
         </div>
       </div>
     </div>`;
   bindDataPage();
+
+  // Load live markets asynchronously
+  loadLiveMarkets();
+}
+
+// ==========================================
+// LIVE POLYMARKET MARKETS
+// ==========================================
+async function loadLiveMarkets(query) {
+  const grid = document.getElementById('markets-grid');
+  if (!grid) return;
+
+  try {
+    let markets;
+    if (query && query.length > 1) {
+      markets = await PolymarketService.searchMarkets(query);
+    } else {
+      markets = await PolymarketService.getMarkets(24);
+    }
+
+    if (!markets || markets.length === 0) {
+      grid.innerHTML = '<div class="market-loading">No markets found. API may be rate-limited — try again in a moment.</div>';
+      return;
+    }
+
+    grid.innerHTML = markets.map(m => {
+      const pm = PolymarketService.parseMarket(m);
+      const yesP = (pm.yesPrice * 100).toFixed(0);
+      const noP = (pm.noPrice * 100).toFixed(0);
+      const vol = pm.volume > 1000000 ? '$' + (pm.volume / 1000000).toFixed(1) + 'M' :
+                  pm.volume > 1000 ? '$' + (pm.volume / 1000).toFixed(0) + 'K' :
+                  '$' + pm.volume.toFixed(0);
+      const liq = pm.liquidity > 1000 ? '$' + (pm.liquidity / 1000).toFixed(0) + 'K' : '$' + pm.liquidity.toFixed(0);
+      const q = (pm.question || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+      return `
+        <div class="market-tile">
+          <div class="market-tile-q">${truncateStr(pm.question, 80)}</div>
+          <div class="market-tile-prices">
+            <div class="market-price-btn market-price-yes" onclick="openMarketBet('${q}','YES',${pm.yesPrice})">${yesP}¢ Yes</div>
+            <div class="market-price-btn market-price-no" onclick="openMarketBet('${q}','NO',${pm.noPrice})">${noP}¢ No</div>
+          </div>
+          <div class="market-tile-meta">
+            <span>Vol: ${vol}</span>
+            <span>Liq: ${liq}</span>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load markets:', e);
+    grid.innerHTML = '<div class="market-loading">Failed to load markets. CORS proxies may be rate-limited.</div>';
+  }
+}
+
+let marketSearchTimeout;
+function handleMarketSearch(e) {
+  clearTimeout(marketSearchTimeout);
+  const q = e.target.value.trim();
+  marketSearchTimeout = setTimeout(() => loadLiveMarkets(q), 400);
+}
+
+function refreshMarkets() {
+  const input = document.getElementById('market-search-input');
+  loadLiveMarkets(input?.value?.trim() || '');
+}
+
+function openMarketBet(marketName, side, price) {
+  if (!activeEval) {
+    alert('No active evaluation. Start a challenge first.');
+    return;
+  }
+  document.getElementById('mbet-market-name').value = marketName;
+  document.getElementById('mbet-market-info').textContent = marketName;
+  document.getElementById('mbet-side').value = side;
+  document.getElementById('mbet-entry').value = Math.round(price * 100);
+  document.getElementById('mbet-size').value = '';
+  const errEl = document.getElementById('mbet-err');
+  if (errEl) errEl.style.display = 'none';
+  openModal('market-bet-modal');
+}
+
+async function placeDashboardBet() {
+  const errEl = document.getElementById('mbet-err');
+  if (errEl) errEl.style.display = 'none';
+  if (!activeEval || !sb) { showMsg(errEl, 'No active evaluation', 'err'); return; }
+
+  const name = document.getElementById('mbet-market-name')?.value;
+  const side = document.getElementById('mbet-side')?.value;
+  const size = parseFloat(document.getElementById('mbet-size')?.value);
+  const entry = parseFloat(document.getElementById('mbet-entry')?.value) / 100;
+
+  if (!name) { showMsg(errEl, 'No market selected', 'err'); return; }
+  if (!size || size <= 0) { showMsg(errEl, 'Enter valid size', 'err'); return; }
+  if (!entry || entry <= 0 || entry >= 1) { showMsg(errEl, 'Entry price must be between 1-99¢', 'err'); return; }
+  if (size > activeEval.balance * 0.15) { showMsg(errEl, 'Max position size is 15% of balance', 'err'); return; }
+
+  const commission = size * 0.01;
+
+  const { error } = await sb.from('trades').insert({
+    evaluation_id: activeEval.id,
+    user_id: currentUser.id,
+    contract_name: name,
+    side: side,
+    trade_size: size,
+    entry_price: entry,
+    commission: commission,
+    status: 'open'
+  });
+
+  if (error) { showMsg(errEl, error.message, 'err'); return; }
+
+  await sb.from('evaluations').update({
+    balance: activeEval.balance - commission
+  }).eq('id', activeEval.id);
+
+  // Refresh account data
+  await AccountManager.loadAccounts();
+  closeModal('market-bet-modal');
+  await loadDashboard();
+}
+
+function truncateStr(s, n) {
+  if (!s) return '—';
+  return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
 function fmt(n) { return '$' + Number(n || 0).toFixed(2); }
@@ -243,6 +400,7 @@ async function openTrade() {
     balance: activeEval.balance - commission
   }).eq('id', activeEval.id);
 
+  await AccountManager.loadAccounts();
   closeModal('trade-modal');
   const nameEl = document.getElementById('tr-name'); if (nameEl) nameEl.value = '';
   const sizeEl = document.getElementById('tr-size'); if (sizeEl) sizeEl.value = '';
@@ -277,6 +435,7 @@ async function closeTrade() {
   }
   pnl = Math.round(pnl * 100) / 100;
 
+  // Mark trade as CLOSED with finalized P&L
   await sb.from('trades').update({
     exit_price: exitPrice, pnl: pnl, status: 'closed', closed_at: new Date().toISOString()
   }).eq('id', closingTradeId);
@@ -316,25 +475,79 @@ async function closeTrade() {
   }
 
   await sb.from('evaluations').update(updateData).eq('id', e.id);
+  await AccountManager.loadAccounts();
   closeModal('close-modal');
   await loadDashboard();
 }
 
 // ==========================================
-// LEADERBOARD
+// LEADERBOARD — Improved
 // ==========================================
 async function loadLeaderboard() {
   const container = document.getElementById('lb-content');
   if (!container) return;
-  if (!sb) { container.innerHTML = '<p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Configure Supabase to view leaderboard</p>'; return; }
-
-  const { data } = await sb.from('leaderboard').select('*');
-  if (!data || data.length === 0) {
-    container.innerHTML = '<p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">No funded traders yet. Be the first.</p>';
+  if (!sb) {
+    container.innerHTML = renderEmptyLeaderboard();
     return;
   }
 
-  container.innerHTML = `<table class="lb-table"><thead><tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Status</th></tr></thead><tbody>${data.map((r,i)=>`<tr><td style="font-weight:700;${i<3?'color:'+(i===0?'#d4a840':i===1?'#a0a8b8':'#b87840'):''}">${i+1}</td><td>${r.trader}</td><td>$${r.account_size}</td><td>${r.eval_type}</td><td style="color:var(--green)">+${r.return_pct}%</td><td>${r.trades_count}</td><td><span class="badge badge-ok">${r.status}</span></td></tr>`).join('')}</tbody></table>`;
+  const { data } = await sb.from('leaderboard').select('*');
+  if (!data || data.length === 0) {
+    container.innerHTML = renderEmptyLeaderboard();
+    return;
+  }
+
+  container.innerHTML = `<table class="lb-table"><thead><tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Status</th></tr></thead><tbody>${data.map((r,i)=>{
+    const rankClass = i === 0 ? 'lb-rank-1' : i === 1 ? 'lb-rank-2' : i === 2 ? 'lb-rank-3' : '';
+    return `<tr><td class="lb-rank ${rankClass}">${i+1}</td><td>${r.trader}</td><td>$${r.account_size}</td><td>${r.eval_type}</td><td style="color:var(--green)">+${r.return_pct}%</td><td>${r.trades_count}</td><td><span class="badge badge-ok">${r.status}</span></td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function renderEmptyLeaderboard() {
+  return `
+    <table class="lb-table">
+      <thead>
+        <tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Win Rate</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr class="lb-empty-row"><td colspan="8">No funded traders yet — be the first to pass an evaluation</td></tr>
+        <tr class="lb-empty-row"><td>1</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr class="lb-empty-row"><td>2</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr class="lb-empty-row"><td>3</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr class="lb-empty-row"><td>4</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr class="lb-empty-row"><td>5</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>`;
+}
+
+// ==========================================
+// ACCOUNTS PAGE
+// ==========================================
+async function loadAccounts() {
+  if (!currentUser || !sb) {
+    const container = document.getElementById('accounts-content');
+    if (container) {
+      container.innerHTML = '<div class="empty-state"><h3>Sign in to view accounts</h3><p>Access your evaluation accounts.</p><button class="btn btn-primary" data-page="login">Sign In</button></div>';
+      bindDataPage();
+    }
+    return;
+  }
+  await AccountManager.loadAccounts();
+  AccountManager.renderAccountSelector('accounts-content');
+}
+
+// ==========================================
+// CERTIFICATE PAGE
+// ==========================================
+function loadCertificate() {
+  const dateEl = document.getElementById('cert-date-val');
+  const nameEl = document.getElementById('cert-name-val');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+  }
+  if (nameEl && currentProfile) {
+    nameEl.textContent = (currentProfile.display_name || currentUser?.email?.split('@')[0] || 'TRADER').toUpperCase();
+  }
 }
 
 // ==========================================
@@ -405,9 +618,6 @@ const PRICES = {
 
 function startChallenge(type, size) {
   if (!currentUser) { showPage('login'); return; }
-  if (activeEval && (activeEval.status === 'active' || activeEval.status === 'funded')) {
-    if (!confirm('You already have an active evaluation. Purchase another?')) return;
-  }
   const key = type + '-' + size;
   const price = PRICES[key] || 99;
   const label = (type === '1step' ? 'One-Step' : 'Two-Step') + ' $' + Number(size).toLocaleString();
@@ -479,6 +689,13 @@ function showPage(id) {
   if (id === 'leaderboard') loadLeaderboard();
   if (id === 'admin' && currentProfile?.is_admin) loadAdmin();
   if (id === 'analytics') loadAnalytics();
+  if (id === 'accounts') loadAccounts();
+  if (id === 'certificate') loadCertificate();
+
+  // Homepage animations
+  if (id === 'home') {
+    setTimeout(() => HomepageAnimations.init(), 100);
+  }
 }
 
 function bindDataPage() {
@@ -497,7 +714,6 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 // INIT
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
-  // Bind all data-page links
   bindDataPage();
 
   // FAQ toggles
@@ -530,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function() {
     bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
   });
 
-  // Check for payment success
+  // Payment success check
   if (window.location.search.includes('payment=success')) {
     alert('Payment received! Your evaluation will be activated shortly.');
     window.history.replaceState({}, '', window.location.pathname);
@@ -538,4 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Init session
   checkSession();
+
+  // Init homepage animations
+  setTimeout(() => HomepageAnimations.init(), 200);
 });
