@@ -16,6 +16,7 @@
     <a data-page="challenges">Challenges</a>
     <a data-page="rules">Rules</a>
     <a data-page="dashboard" class="auth-only">Dashboard</a>
+    <a data-page="analytics" class="auth-only">Analytics</a>
     <a data-page="leaderboard">Leaderboard</a>
     <a data-page="admin" class="admin-only">Admin</a>
     <a data-page="faq">FAQ</a>
@@ -107,10 +108,14 @@
 </div>
 <div class="page" id="page-login">
   <div class="auth-box" id="auth-login"><h2>Sign In</h2><div class="sub">Access your evaluation account</div><div class="msg msg-err" id="login-err"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="login-email" type="email" placeholder="trader@email.com"></div><div class="form-group"><label class="form-label">Password</label><input class="form-input" id="login-pass" type="password" placeholder="••••••••"></div><button class="form-btn" onclick="login()">Sign In →</button><div class="auth-toggle">Don't have an account? <a onclick="toggleAuth('register')">Create one</a></div></div>
-  <div class="auth-box" id="auth-register" style="display:none"><h2>Create Account</h2><div class="sub">Start your trading journey</div><div class="msg msg-err" id="reg-err"></div><div class="msg msg-ok" id="reg-ok"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="reg-email" type="email" placeholder="trader@email.com"></div><div class="form-group"><label class="form-label">Password</label><input class="form-input" id="reg-pass" type="password" placeholder="Min 6 characters"></div><div class="form-group"><label class="form-label">Confirm Password</label><input class="form-input" id="reg-pass2" type="password" placeholder="••••••••"></div><button class="form-btn" onclick="register()">Create Account →</button><div class="auth-toggle">Already have an account? <a onclick="toggleAuth('login')">Sign in</a></div></div>
+  <div class="auth-box" id="auth-register" style="display:none"><h2>Create Account</h2><div class="sub">Start your trading journey</div><div class="msg msg-err" id="reg-err"></div><div class="msg msg-ok" id="reg-ok"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="reg-email" type="email" placeholder="trader@email.com"></div><div class="form-group"><label class="form-label">Password</label><input class="form-input" id="reg-pass" type="password" placeholder="Min 6 characters"></div><div class="form-group"><label class="form-label">Confirm Password</label><input class="form-input" id="reg-pass2" type="password" placeholder="••••••••"></div><div class="form-group"><label class="form-label">Polymarket Wallet (optional)</label><input class="form-input" id="reg-wallet" placeholder="0x... your Polymarket wallet address" style="font-size:12px"></div><button class="form-btn" onclick="register()">Create Account →</button><div class="auth-toggle">Already have an account? <a onclick="toggleAuth('login')">Sign in</a></div></div>
 </div>
 <div class="modal-bg" id="trade-modal"><div class="modal"><button class="modal-close" onclick="closeModal('trade-modal')">✕</button><h3>Open Trade</h3><div class="msg msg-err" id="trade-err"></div><div class="form-group"><label class="form-label">Contract Name</label><input class="form-input" id="tr-name" placeholder="e.g. Fed Rate Hold Jun 2026"></div><div class="form-row"><div class="form-group"><label class="form-label">Side</label><select class="form-select" id="tr-side"><option value="YES">YES</option><option value="NO">NO</option></select></div><div class="form-group"><label class="form-label">Size ($)</label><input class="form-input" id="tr-size" type="number" placeholder="50"></div></div><div class="form-group"><label class="form-label">Entry Price (¢)</label><input class="form-input" id="tr-entry" type="number" step="0.1" placeholder="e.g. 72.5"></div><button class="form-btn" onclick="openTrade()">Open Trade</button></div></div>
 <div class="modal-bg" id="close-modal"><div class="modal"><button class="modal-close" onclick="closeModal('close-modal')">✕</button><h3>Close Trade</h3><div class="msg msg-err" id="close-err"></div><p id="close-info" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:16px"></p><div class="form-group"><label class="form-label">Exit Price (¢)</label><input class="form-input" id="cl-exit" type="number" step="0.1" placeholder="e.g. 85.0"></div><button class="form-btn" onclick="closeTrade()">Close Trade</button></div></div>
+<div class="page" id="page-analytics">
+  <div id="analytics-content"></div>
+  <footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer>
+</div>
 <script src="js/app.js"></script>
 </body>
 </html>
