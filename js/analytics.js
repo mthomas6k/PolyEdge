@@ -1,10 +1,9 @@
 // ==========================================
 // POLYMARKET ANALYTICS ENGINE
-// analytics.js
+// analytics.js — Fixed: uses CLOSED bets for all calculations
 // ==========================================
 
 const PM = (() => {
-
   const PROXIES = [
     (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -27,7 +26,6 @@ const PM = (() => {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const text = await r.text();
-      // Handle empty responses gracefully
       if (!text || text.trim() === '') return [];
       return JSON.parse(text);
     } catch (e) {
@@ -56,16 +54,9 @@ const PM = (() => {
     }
   }
 
-  async function getProfile(wallet) {
-    try {
-      return await fetchWithProxy(`${GAMMA_API}/profiles?user=${wallet}`);
-    } catch { return null; }
-  }
-
   function computeStats(positions, activity) {
     const trades = (activity || []).filter(a => a.type === 'TRADE' || a.side);
 
-    // P&L over time
     const dailyPnl = {};
     const sorted = [...trades].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
@@ -92,6 +83,7 @@ const PM = (() => {
     const totalCashPnl = pos.reduce((s, p) => s + parseFloat(p.cashPnl || 0), 0);
     const totalInitialValue = pos.reduce((s, p) => s + parseFloat(p.initialValue || 0), 0);
 
+    // CLOSED positions — resolved markets only
     const closed = pos.filter(p => {
       const price = parseFloat(p.curPrice || 0);
       return p.redeemable || price <= 0.01 || price >= 0.99;
@@ -102,6 +94,7 @@ const PM = (() => {
     });
     const winRate = closed.length > 0 ? (won.length / closed.length * 100) : 0;
 
+    // OPEN positions — active, not resolved
     const open = pos.filter(p =>
       !p.redeemable &&
       parseFloat(p.curPrice || 0) > 0.01 &&
@@ -129,26 +122,13 @@ const PM = (() => {
     });
 
     return {
-      cumPnl,
-      totalRealizedPnl,
-      totalCurrentValue,
-      totalCashPnl,
-      totalInitialValue,
-      winRate,
-      won: won.length,
-      lost: closed.length - won.length,
-      totalClosed: closed.length,
-      open,
-      best,
-      worst,
-      totalVolume,
-      totalTrades: trades.length,
-      dayPerf,
-      positions: pos,
+      cumPnl, totalRealizedPnl, totalCurrentValue, totalCashPnl, totalInitialValue,
+      winRate, won: won.length, lost: closed.length - won.length, totalClosed: closed.length,
+      open, closed, best, worst, totalVolume, totalTrades: trades.length, dayPerf, positions: pos,
     };
   }
 
-  return { getPositions, getActivity, getProfile, computeStats };
+  return { getPositions, getActivity, computeStats };
 })();
 
 
@@ -163,7 +143,6 @@ async function loadAnalytics() {
   const content = document.getElementById('analytics-content');
   if (!content) return;
 
-  // Get wallet from profile or existing
   if (!analyticsWallet) {
     analyticsWallet = (typeof currentProfile !== 'undefined' && currentProfile?.polymarket_wallet) || null;
   }
@@ -206,12 +185,11 @@ async function connectWallet() {
   }
   analyticsWallet = wallet;
 
-  // Save to profile if logged in
   if (typeof currentUser !== 'undefined' && currentUser && typeof sb !== 'undefined' && sb) {
     try {
       await sb.from('profiles').update({ polymarket_wallet: wallet }).eq('id', currentUser.id);
       if (currentProfile) currentProfile.polymarket_wallet = wallet;
-    } catch(e) { /* non-critical */ }
+    } catch(e) {}
   }
 
   renderAnalyticsLoading();
@@ -269,6 +247,9 @@ function renderAnalyticsDashboard(s, wallet) {
   const pnlColor = s.totalCashPnl >= 0 ? 'var(--green)' : 'var(--red)';
   const pnlSign = s.totalCashPnl >= 0 ? '+' : '';
 
+  // Calculate stats from CLOSED bets only
+  const closedPnl = s.closed ? s.closed.reduce((sum, p) => sum + parseFloat(p.cashPnl || 0), 0) : 0;
+
   const c = document.getElementById('analytics-content');
   if (!c) return;
   c.innerHTML = `
@@ -292,20 +273,20 @@ function renderAnalyticsDashboard(s, wallet) {
         <div class="an-kpi-val" style="color:${pnlColor}">${pnlSign}$${Math.abs(s.totalCashPnl).toFixed(2)}</div>
         <div class="an-kpi-sub">cash P&amp;L</div>
       </div>
-      <div class="an-kpi" data-tooltip="Realized profits from closed/resolved markets">
+      <div class="an-kpi" data-tooltip="Realized profits from closed/resolved markets only">
         <div class="an-kpi-label">Realized P&L</div>
         <div class="an-kpi-val" style="color:${s.totalRealizedPnl>=0?'var(--green)':'var(--red)'}">${s.totalRealizedPnl>=0?'+':''}$${Math.abs(s.totalRealizedPnl).toFixed(2)}</div>
-        <div class="an-kpi-sub">from closed markets</div>
+        <div class="an-kpi-sub">closed markets only</div>
       </div>
       <div class="an-kpi" data-tooltip="Current market value of all open positions">
         <div class="an-kpi-label">Portfolio Value</div>
         <div class="an-kpi-val">$${s.totalCurrentValue.toFixed(2)}</div>
-        <div class="an-kpi-sub">open positions</div>
+        <div class="an-kpi-sub">${s.open.length} open positions</div>
       </div>
-      <div class="an-kpi" data-tooltip="Win rate on resolved markets only">
+      <div class="an-kpi" data-tooltip="Win rate calculated from resolved/closed markets only">
         <div class="an-kpi-label">Win Rate</div>
         <div class="an-kpi-val" style="color:${s.winRate>=50?'var(--green)':'var(--red)'}">${s.winRate.toFixed(1)}%</div>
-        <div class="an-kpi-sub">${s.won}W / ${s.lost}L</div>
+        <div class="an-kpi-sub">${s.won}W / ${s.lost}L (closed)</div>
       </div>
       <div class="an-kpi" data-tooltip="Total USDC traded across all activity">
         <div class="an-kpi-label">Volume</div>
@@ -412,14 +393,39 @@ function renderAnalyticsDashboard(s, wallet) {
         </div>
       ` : '<div class="an-empty-state" style="padding:40px">No open positions found</div>'}
     </div>
+
+    <!-- P&L Calendar — uses CLOSED bets from Supabase evaluations -->
+    <div id="analytics-calendar"></div>
   `;
 
-  // Draw charts after DOM renders
+  // Draw charts
   requestAnimationFrame(() => {
     if (s.cumPnl.length > 0) drawPnlChart(s.cumPnl);
     drawGauge(s.winRate);
     initTooltips();
+    // Load calendar with closed trades from the active evaluation
+    loadAnalyticsCalendar();
   });
+}
+
+// Load the calendar using CLOSED trades from Supabase
+async function loadAnalyticsCalendar() {
+  if (typeof sb !== 'undefined' && sb && typeof currentUser !== 'undefined' && currentUser) {
+    const selectedAccount = typeof AccountManager !== 'undefined' ? AccountManager.getSelected() : null;
+    if (selectedAccount) {
+      const { data: trades } = await sb.from('trades')
+        .select('*')
+        .eq('evaluation_id', selectedAccount.id)
+        .eq('status', 'closed')
+        .order('closed_at', { ascending: false });
+      CalendarComponent.setTrades(trades || []);
+    } else {
+      CalendarComponent.setTrades([]);
+    }
+  } else {
+    CalendarComponent.setTrades([]);
+  }
+  CalendarComponent.render('analytics-calendar');
 }
 
 function renderDayBars(dayPerf) {
@@ -466,15 +472,13 @@ function drawPnlChart(cumPnl) {
   const toX = (i) => pad.l + (vals.length > 1 ? (i / (vals.length - 1)) * w : w / 2);
   const toY = (v) => pad.t + (1 - (v - min) / range) * h;
 
-  // Zero line
-  const zeroY = toY(0);
   ctx.setLineDash([3, 4]);
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 1;
+  const zeroY = toY(0);
   ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(pad.l + w, zeroY); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Y labels
   ctx.font = "10px 'JetBrains Mono', monospace";
   ctx.fillStyle = '#4a5878';
   ctx.textAlign = 'right';
@@ -482,14 +486,12 @@ function drawPnlChart(cumPnl) {
     ctx.fillText((v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(0), pad.l - 6, toY(v) + 4);
   });
 
-  // X labels (sparse)
   ctx.textAlign = 'center';
   const step = Math.max(1, Math.floor(labels.length / 6));
   for (let i = 0; i < labels.length; i += step) {
     ctx.fillText(labels[i], toX(i), H - 8);
   }
 
-  // Gradient fill
   const lastVal = vals[vals.length - 1] || 0;
   const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + h);
   if (lastVal >= 0) {
@@ -509,7 +511,6 @@ function drawPnlChart(cumPnl) {
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Line
   const lineColor = lastVal >= 0 ? '#40b080' : '#d04848';
   ctx.beginPath();
   ctx.moveTo(toX(0), toY(vals[0]));
@@ -519,7 +520,6 @@ function drawPnlChart(cumPnl) {
   ctx.lineJoin = 'round';
   ctx.stroke();
 
-  // End dot
   const lastX = toX(vals.length - 1);
   const lastY = toY(lastVal);
   ctx.beginPath();
@@ -540,10 +540,8 @@ function drawGauge(winRate) {
   canvas.style.height = H + 'px';
   ctx.scale(dpr, dpr);
 
-  const cx = W / 2, cy = H - 20;
-  const r = 90;
+  const cx = W / 2, cy = H - 20, r = 90;
 
-  // Background arc
   ctx.beginPath();
   ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
@@ -551,7 +549,6 @@ function drawGauge(winRate) {
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  // Value arc
   const fillAngle = Math.PI + (winRate / 100) * Math.PI;
   const color = winRate >= 50 ? '#40b080' : winRate >= 30 ? '#c8a030' : '#d04848';
   ctx.beginPath();
@@ -561,7 +558,6 @@ function drawGauge(winRate) {
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  // Tick marks
   for (let i = 0; i <= 10; i++) {
     const angle = Math.PI + (i / 10) * Math.PI;
     const ix = cx + (r - 8) * Math.cos(angle);
@@ -581,12 +577,6 @@ function drawGauge(winRate) {
 }
 
 function initTooltips() {
-  if (!document.getElementById('chart-tooltip')) {
-    const tip = document.createElement('div');
-    tip.id = 'chart-tooltip';
-    tip.className = 'an-chart-tooltip';
-    document.body.appendChild(tip);
-  }
   document.querySelectorAll('[data-tooltip]').forEach(el => {
     el.addEventListener('mouseenter', () => {
       const t = document.createElement('div');
