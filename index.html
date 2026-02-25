@@ -116,6 +116,44 @@
   <div id="analytics-content"></div>
   <footer><p>POLYEDGE · Polymarket Prop Firm · 2026</p></footer>
 </div>
+<div class="modal-bg" id="mock-checkout-modal">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close" onclick="closeModal('mock-checkout-modal')">&#x2715;</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <span style="font-size:18px">&#x1F512;</span>
+      <h3 style="margin-bottom:0">Secure Checkout</h3>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:24px">mock payment &mdash; no real charge</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);padding:14px 16px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--mono);font-size:12px;color:var(--text2)" id="mc-label"></span>
+      <span style="font-family:var(--mono);font-size:18px;font-weight:700;color:#fff" id="mc-price"></span>
+    </div>
+    <input type="hidden" id="mc-type">
+    <input type="hidden" id="mc-size">
+    <div class="msg msg-err" id="mc-err"></div>
+    <div class="form-group">
+      <label class="form-label">Card Number</label>
+      <input class="form-input" id="mc-card" placeholder="4242 4242 4242 4242" maxlength="19"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(.{4})/g,'$1 ').trim()">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Expiry</label>
+        <input class="form-input" id="mc-expiry" placeholder="MM/YY" maxlength="5"
+          oninput="this.value=this.value.replace(/[^0-9/]/g,'')">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CVV</label>
+        <input class="form-input" id="mc-cvv" placeholder="123" maxlength="4"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+    </div>
+    <button class="form-btn" id="mc-btn" onclick="submitMockPayment()">Pay &#x2192;</button>
+    <p style="font-family:var(--mono);font-size:9px;color:var(--text3);text-align:center;margin-top:12px;line-height:1.6">
+      This is a demo. Any card number works. Your evaluation activates instantly.
+    </p>
+  </div>
+</div>
 <script src="js/app.js"></script>
 <script src="js/analytics.js"></script>
 </body>
