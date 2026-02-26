@@ -727,7 +727,13 @@ function showPage(id) {
 function bindDataPage() {
   document.querySelectorAll('[data-page]').forEach(el => {
     if (!el._bound) {
-      el.addEventListener('click', e => { e.preventDefault(); showPage(el.getAttribute('data-page')); });
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        showPage(el.getAttribute('data-page'));
+        // Close mobile nav menu after navigation
+        const navLinks = document.getElementById('nav-links');
+        if (navLinks) navLinks.classList.remove('open');
+      });
       el._bound = true;
     }
   });
@@ -741,6 +747,15 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
   bindDataPage();
+
+  // Mobile nav toggle
+  const menuToggle = document.getElementById('nav-menu-toggle');
+  const navLinks = document.getElementById('nav-links');
+  if (menuToggle && navLinks) {
+    menuToggle.addEventListener('click', () => {
+      navLinks.classList.toggle('open');
+    });
+  }
 
   // FAQ toggles
   document.querySelectorAll('.faq-q').forEach(q => {
