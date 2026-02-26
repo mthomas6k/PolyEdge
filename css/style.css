@@ -31,6 +31,8 @@ nav{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(4,6,10,0.94)
 .nav-cta:hover{background:var(--accent2)}
 .nav-cta.ghost{background:transparent;border:1px solid var(--border2);color:var(--text3)}
 .nav-cta.ghost:hover{border-color:var(--text3);color:var(--text)}
+.nav-menu-toggle{display:none;background:transparent;border:none;cursor:pointer;padding:8px;margin-left:8px;margin-right:8px;flex-shrink:0}
+.nav-menu-toggle span{display:block;width:16px;height:2px;background:var(--text3);margin:3px 0;border-radius:2px;transition:background 0.2s,transform 0.2s}
 
 .page{display:none;padding-top:56px;min-height:100vh}
 .page.active{display:block;animation:fadeIn 0.25s ease}
@@ -446,6 +448,11 @@ footer{border-top:1px solid var(--border);padding:40px 32px;text-align:center;fo
   .market-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:768px){
+  .nav-menu-toggle{display:flex;flex-direction:column;justify-content:center;align-items:center}
+  .nav-links{position:fixed;top:56px;left:0;right:0;background:rgba(4,6,10,0.98);flex-direction:column;display:none;border-bottom:1px solid var(--border);box-shadow:0 14px 40px rgba(0,0,0,0.7)}
+  .nav-links.open{display:flex}
+  .nav-links a{padding:14px 24px;border-bottom:1px solid var(--border)}
+  .nav-right{gap:8px}
   .hero h1{font-size:32px}
   .hero-stats{flex-direction:column;gap:16px}
   .hero-stat-divider{width:40px;height:1px}
