@@ -1,15 +1,15 @@
 // ==========================================
-// CONFIG
+// CONFIG (uses js/config.js — set window.__POLYEDGE_ENV in production to avoid hardcoding)
 // ==========================================
-const SUPABASE_URL = 'https://iyaqyoxezkovuusoomgf.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5YXF5b3hlemtvdnV1c29vbWdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTM3NDcsImV4cCI6MjA4NzUyOTc0N30.9dja2T1r2AlgytvQWuQO2exoGTdPcIVM0VQXp1MWB7Q';
+var SUPABASE_URL = (typeof window !== 'undefined' && window.POLYEDGE_CONFIG) ? window.POLYEDGE_CONFIG.SUPABASE_URL : '';
+var SUPABASE_KEY = (typeof window !== 'undefined' && window.POLYEDGE_CONFIG) ? window.POLYEDGE_CONFIG.SUPABASE_ANON_KEY : '';
 
 // ==========================================
-// SUPABASE INIT
+// SUPABASE INIT (anon key only — never use service_role in frontend)
 // ==========================================
 let sb = null;
 try {
-  if (typeof supabase !== 'undefined' && supabase.createClient) {
+  if (typeof supabase !== 'undefined' && supabase.createClient && SUPABASE_URL && SUPABASE_KEY) {
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   }
 } catch(e) {
@@ -181,8 +181,38 @@ async function loadDashboard() {
     await AccountManager.loadAccounts();
     const acct = AccountManager.getSelected();
     if (!acct) {
-      container.innerHTML = '<div class="empty-state"><h3>No Active Evaluation</h3><p>Start a challenge to begin your funded betting journey.</p><button class="btn btn-primary" data-page="challenges">View Challenges →</button></div>';
+      activeEval = null;
+      container.innerHTML = `
+        <div class="dash-grid">
+          <div class="dash-sidebar">
+            <div class="dc">
+              <div class="dc-label">Account</div>
+              <div class="badge badge-warn">NO ACTIVE EVALUATION</div>
+              <div class="dc-sub" style="margin-top:10px">You can browse live markets, but you can’t place bets until you start a challenge.</div>
+              <div style="margin-top:14px">
+                <button class="btn btn-primary" data-page="challenges" style="width:100%">View Challenges →</button>
+              </div>
+            </div>
+          </div>
+          <div class="dash-main">
+            <div class="dash-markets-section">
+              <div class="dash-markets-header">
+                <div class="dp-title">Live Polymarket Markets</div>
+                <div class="dash-markets-search">
+                  <input id="market-search-input" placeholder="Search markets..." onkeyup="handleMarketSearch(event)">
+                  <button class="form-btn" style="width:auto;padding:8px 16px;font-size:10px" onclick="refreshMarkets()">↻ Refresh</button>
+                </div>
+              </div>
+              <div id="markets-grid" class="market-grid">
+                <div class="market-loading"><div class="an-spinner" style="margin:0 auto 12px;width:24px;height:24px"></div>Loading markets...</div>
+              </div>
+              <div class="dc-sub" style="margin-top:10px">To place a bet, start a challenge and come back to Dashboard.</div>
+            </div>
+          </div>
+        </div>
+      `;
       bindDataPage();
+      loadLiveMarkets();
       return;
     }
     activeEval = acct;
@@ -286,6 +316,7 @@ async function loadLiveMarkets(query) {
       return;
     }
 
+    const canBet = !!activeEval;
     grid.innerHTML = markets.map(m => {
       const pm = PolymarketService.parseMarket(m);
       const yesP = (pm.yesPrice * 100).toFixed(0);
@@ -300,8 +331,8 @@ async function loadLiveMarkets(query) {
         <div class="market-tile">
           <div class="market-tile-q">${truncateStr(pm.question, 80)}</div>
           <div class="market-tile-prices">
-            <div class="market-price-btn market-price-yes" onclick="openMarketBet('${q}','YES',${pm.yesPrice})">${yesP}¢ Yes</div>
-            <div class="market-price-btn market-price-no" onclick="openMarketBet('${q}','NO',${pm.noPrice})">${noP}¢ No</div>
+            <div class="market-price-btn market-price-yes ${canBet ? '' : 'disabled'}" ${canBet ? `onclick="openMarketBet('${q}','YES',${pm.yesPrice})"` : 'title="Start a challenge to place bets"'}>${yesP}¢ Yes</div>
+            <div class="market-price-btn market-price-no ${canBet ? '' : 'disabled'}" ${canBet ? `onclick="openMarketBet('${q}','NO',${pm.noPrice})"` : 'title="Start a challenge to place bets"'}>${noP}¢ No</div>
           </div>
           <div class="market-tile-meta">
             <span>Vol: ${vol}</span>
