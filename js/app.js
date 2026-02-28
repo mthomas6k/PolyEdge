@@ -678,10 +678,12 @@ const PRICES = {
 };
 
 async function startChallenge(type, size) {
+  alert('Start Challenge clicked — if you see this, the new script is running.');
   var btn = document.querySelectorAll('.ch-btn');
-  function restoreBtn() { btn.forEach(function(b) { b.disabled = false; b.textContent = 'Start Challenge →'; }); }
-
-  btn.forEach(function(b) { b.disabled = true; b.textContent = 'Checking…'; });
+  function restoreBtn() { try { btn.forEach(function(b) { b.disabled = false; b.textContent = 'Start Challenge →'; }); } catch (_) {} }
+  try {
+    btn.forEach(function(b) { b.disabled = true; b.textContent = 'Checking…'; });
+  } catch (_) { alert('Could not update button'); restoreBtn(); return; }
 
   try {
     if (!currentUser) { showPage('login'); restoreBtn(); return; }
