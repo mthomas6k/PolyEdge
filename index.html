@@ -612,37 +612,6 @@
     </div>
   </div>
 
-  <!-- Mock Checkout Modal -->
-  <div class="modal-bg" id="mock-checkout-modal">
-    <div class="modal">
-      <button class="modal-close" onclick="closeModal('mock-checkout-modal')">✕</button>
-      <h3>Checkout</h3>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)">
-        <span id="mc-label" style="font-family:var(--mono);font-size:14px;color:var(--text)"></span>
-        <span id="mc-price" style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent)"></span>
-      </div>
-      <input type="hidden" id="mc-type">
-      <input type="hidden" id="mc-size">
-      <div class="msg msg-err" id="mc-err"></div>
-      <div class="form-group">
-        <label class="form-label">Card Number</label>
-        <input class="form-input" id="mc-card" placeholder="4242 4242 4242 4242">
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Expiry</label>
-          <input class="form-input" id="mc-expiry" placeholder="MM/YY">
-        </div>
-        <div class="form-group">
-          <label class="form-label">CVV</label>
-          <input class="form-input" id="mc-cvv" placeholder="123">
-        </div>
-      </div>
-      <button class="form-btn" id="mc-btn" onclick="submitMockPayment()">Pay →</button>
-      <p style="font-family:var(--mono);font-size:9px;color:var(--text3);text-align:center;margin-top:12px;letter-spacing:0.5px">DEMO MODE · No real charges will be made</p>
-    </div>
-  </div>
-
   <!-- ========== BOTTOM NAVIGATION ========== -->
   <div class="bottom-nav" id="bottom-nav">
     <div class="bottom-nav-inner">
