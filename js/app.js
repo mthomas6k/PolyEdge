@@ -3,6 +3,10 @@
 // ==========================================
 var SUPABASE_URL = (typeof window !== 'undefined' && window.POLYEDGE_CONFIG) ? window.POLYEDGE_CONFIG.SUPABASE_URL : '';
 var SUPABASE_KEY = (typeof window !== 'undefined' && window.POLYEDGE_CONFIG) ? window.POLYEDGE_CONFIG.SUPABASE_ANON_KEY : '';
+function getCreateCheckoutUrl() {
+  if (!SUPABASE_URL) return '';
+  return SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/create-checkout';
+}
 
 // ==========================================
 // SUPABASE INIT (anon key only — never use service_role in frontend)
@@ -666,66 +670,43 @@ function showAdminTab(tab) {
 }
 
 // ==========================================
-// MOCK CHECKOUT
+// STRIPE CHECKOUT (redirect to Stripe; evaluation created via webhook)
 // ==========================================
 const PRICES = {
   '1step-500': 79, '1step-1000': 139, '1step-2000': 199,
   '2step-500': 59, '2step-1000': 119, '2step-2000': 179,
 };
 
-function startChallenge(type, size) {
+async function startChallenge(type, size) {
   if (!currentUser) { showPage('login'); return; }
-  const key = type + '-' + size;
-  const price = PRICES[key] || 99;
-  const label = (type === '1step' ? 'One-Step' : 'Two-Step') + ' $' + Number(size).toLocaleString();
-  const mcLabel = document.getElementById('mc-label'); if (mcLabel) mcLabel.textContent = label;
-  const mcPrice = document.getElementById('mc-price'); if (mcPrice) mcPrice.textContent = '$' + price;
-  const mcType = document.getElementById('mc-type'); if (mcType) mcType.value = type;
-  const mcSize = document.getElementById('mc-size'); if (mcSize) mcSize.value = size;
-  ['mc-card','mc-expiry','mc-cvv'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  const mcErr = document.getElementById('mc-err'); if (mcErr) mcErr.style.display = 'none';
-  const mcBtn = document.getElementById('mc-btn');
-  if (mcBtn) { mcBtn.textContent = 'Pay $' + price + ' →'; mcBtn.disabled = false; }
-  openModal('mock-checkout-modal');
-}
+  const url = getCreateCheckoutUrl();
+  if (!url) { alert('Checkout is not configured.'); return; }
 
-async function submitMockPayment() {
-  if (!sb) return;
-  const card = (document.getElementById('mc-card')?.value || '').replace(/\s/g, '');
-  const expiry = (document.getElementById('mc-expiry')?.value || '').trim();
-  const cvv = (document.getElementById('mc-cvv')?.value || '').trim();
-  const errEl = document.getElementById('mc-err');
-  if (errEl) errEl.style.display = 'none';
-  if (card.length < 12) { showMsg(errEl, 'Enter a valid card number', 'err'); return; }
-  if (!expiry.includes('/')) { showMsg(errEl, 'Enter expiry as MM/YY', 'err'); return; }
-  if (cvv.length < 3) { showMsg(errEl, 'Enter a valid CVV', 'err'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { showPage('login'); return; }
 
-  const btn = document.getElementById('mc-btn');
-  if (btn) { btn.textContent = 'Processing…'; btn.disabled = true; }
-  await new Promise(r => setTimeout(r, 1400));
-
-  const type = document.getElementById('mc-type')?.value;
-  const size = parseInt(document.getElementById('mc-size')?.value);
-  const isOneStep = type === '1step';
-
-  const { error } = await sb.from('evaluations').insert({
-    user_id: currentUser.id, eval_type: isOneStep ? '1-step' : '2-step',
-    account_size: size, phase: 1, status: 'active', starting_balance: size,
-    balance: size, high_water_mark: size, profit_target_pct: isOneStep ? 10 : 6,
-    max_drawdown_pct: 6, consistency_rule_pct: isOneStep ? 20 : 50,
-    min_trades: isOneStep ? 5 : 2, trades_count: 0, total_profit: 0, total_loss: 0,
-    largest_trade_profit: 0, expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-  });
-
-  if (error) {
-    showMsg(errEl, error.message, 'err');
-    if (btn) { btn.textContent = 'Pay $' + PRICES[type + '-' + size] + ' →'; btn.disabled = false; }
-    return;
+  const btn = document.querySelectorAll('.ch-btn');
+  try {
+    btn.forEach(b => { b.disabled = true; b.textContent = 'Redirecting…'; });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({
+        type: type === '2step' ? '2step' : '1step',
+        size: [500, 1000, 2000].includes(Number(size)) ? Number(size) : 500,
+        success_base_url: window.location.origin + (window.location.pathname || '/').replace(/\/$/, '')
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Checkout failed.');
+      return;
+    }
+    if (data.url) window.location.href = data.url;
+    else alert('Checkout URL missing.');
+  } finally {
+    btn.forEach(b => { b.disabled = false; b.textContent = 'Start Challenge →'; });
   }
-
-  closeModal('mock-checkout-modal');
-  await checkSession();
-  showPage('dashboard');
 }
 
 // ==========================================
@@ -776,7 +757,7 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 // ==========================================
 // INIT
 // ==========================================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   bindDataPage();
 
   // Mobile nav toggle
@@ -818,14 +799,19 @@ document.addEventListener('DOMContentLoaded', function() {
     bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
   });
 
-  // Payment success check
-  if (window.location.search.includes('payment=success')) {
+  // Payment success / cancel
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('payment') === 'success') {
+    window.history.replaceState({}, '', window.location.pathname || '/');
+    await checkSession();
     alert('Payment received! Your evaluation will be activated shortly.');
-    window.history.replaceState({}, '', window.location.pathname);
+    showPage('dashboard');
+  } else if (params.get('payment') === 'cancelled') {
+    window.history.replaceState({}, '', window.location.pathname || '/');
   }
 
   // Init session
-  checkSession();
+  await checkSession();
 
   // Init homepage animations
   setTimeout(() => HomepageAnimations.init(), 200);
