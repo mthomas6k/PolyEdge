@@ -139,9 +139,16 @@ const PM = (() => {
 let analyticsWallet = null;
 let analyticsData = null;
 
-async function loadAnalytics() {
+async function loadAnalytics(forceWalletPrompt) {
   const content = document.getElementById('analytics-content');
   if (!content) return;
+
+  // "Change wallet" clicked: show the wallet input form instead of reusing stored wallet
+  if (forceWalletPrompt) {
+    analyticsWallet = null;
+    renderWalletPrompt();
+    return;
+  }
 
   const profileWallet = (typeof currentProfile !== 'undefined' && currentProfile) ? currentProfile.polymarket_wallet : null;
   let storedWallet = null;
@@ -247,7 +254,7 @@ async function fetchAndRenderAnalytics(wallet) {
           <h3>Failed to Load Data</h3>
           <p>${e.message || 'All CORS proxies failed. This can happen due to rate limiting.'}</p>
           <button class="form-btn" style="width:auto;margin-top:20px;padding:12px 24px" onclick="fetchAndRenderAnalytics('${wallet}')">Retry →</button>
-          <button class="form-btn secondary" style="width:auto;margin-top:10px;padding:12px 24px" onclick="analyticsWallet=null;loadAnalytics()">Change Wallet</button>
+          <button class="form-btn secondary" style="width:auto;margin-top:10px;padding:12px 24px" onclick="loadAnalytics(true)">Change Wallet</button>
         </div>
       </div>`;
   }
@@ -269,7 +276,7 @@ function renderAnalyticsDashboard(s, wallet) {
         <div class="an-wallet-badge">
           <span class="an-wallet-dot"></span>
           <span class="an-wallet-addr">${shortWallet}</span>
-          <button class="an-change-wallet" onclick="analyticsWallet=null;loadAnalytics()">change</button>
+          <button class="an-change-wallet" onclick="loadAnalytics(true)">change</button>
         </div>
         <h1 class="an-title">Portfolio Analytics</h1>
       </div>
