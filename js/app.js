@@ -824,6 +824,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   }
 
+  // Start Challenge buttons (delegated so we always catch errors)
+  document.addEventListener('click', function(e) {
+    var btn = e.target && e.target.closest && e.target.closest('.ch-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var type = btn.getAttribute('data-type') || '1step';
+    var size = parseInt(btn.getAttribute('data-size'), 10) || 500;
+    try {
+      startChallenge(type, size);
+    } catch (err) {
+      alert('Error: ' + (err && err.message ? err.message : String(err)));
+    }
+  });
+
   // Modal close on backdrop
   document.querySelectorAll('.modal-bg').forEach(bg => {
     bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
