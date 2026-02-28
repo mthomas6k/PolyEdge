@@ -678,50 +678,64 @@ const PRICES = {
 };
 
 async function startChallenge(type, size) {
-  if (!currentUser) { showPage('login'); return; }
-  const url = getCreateCheckoutUrl();
-  if (!url) { alert('Checkout is not configured. Set SUPABASE_URL in config.'); return; }
-  if (!sb) { alert('Supabase is not loaded. Check your connection and config.'); return; }
+  var btn = document.querySelectorAll('.ch-btn');
+  function restoreBtn() { btn.forEach(function(b) { b.disabled = false; b.textContent = 'Start Challenge →'; }); }
 
-  let session;
-  try {
-    const { data } = await sb.auth.getSession();
-    session = data?.session;
-  } catch (e) {
-    alert('Session error. Try signing in again.');
-    return;
-  }
-  if (!session) { showPage('login'); return; }
+  btn.forEach(function(b) { b.disabled = true; b.textContent = 'Checking…'; });
 
-  const btn = document.querySelectorAll('.ch-btn');
   try {
-    btn.forEach(b => { b.disabled = true; b.textContent = 'Redirecting…'; });
-    const res = await fetch(url, {
+    if (!currentUser) { showPage('login'); restoreBtn(); return; }
+    var url = getCreateCheckoutUrl();
+    if (!url) { alert('Checkout is not configured. Set SUPABASE_URL in config.'); restoreBtn(); return; }
+    if (!sb) { alert('Supabase is not loaded. Check your connection and config.'); restoreBtn(); return; }
+
+    var session = null;
+    try {
+      var data = await sb.auth.getSession();
+      session = data && data.data && data.data.session;
+    } catch (e) {
+      alert('Session error. Try signing in again.');
+      restoreBtn();
+      return;
+    }
+    if (!session) { showPage('login'); restoreBtn(); return; }
+
+    btn.forEach(function(b) { b.textContent = 'Redirecting…'; });
+    var res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+        'apikey': SUPABASE_KEY
+      },
       body: JSON.stringify({
         type: type === '2step' ? '2step' : '1step',
         size: [500, 1000, 2000].includes(Number(size)) ? Number(size) : 500,
         success_base_url: window.location.origin + (window.location.pathname || '/').replace(/\/$/, '')
       })
     });
-    let data;
+    var json = null;
     try {
-      data = await res.json();
+      json = await res.json();
     } catch (_) {
-      alert('Checkout server error. If you just deployed the Edge Function, wait a moment and try again.');
+      alert('Checkout server error (invalid response). Is the create-checkout Edge Function deployed?');
+      restoreBtn();
       return;
     }
     if (!res.ok) {
-      alert(data?.error || 'Checkout failed.');
+      alert(json && json.error ? json.error : 'Checkout failed.');
+      restoreBtn();
       return;
     }
-    if (data.url) window.location.href = data.url;
-    else alert('Checkout URL missing.');
+    if (json && json.url) {
+      window.location.href = json.url;
+      return;
+    }
+    alert('Checkout URL missing.');
+    restoreBtn();
   } catch (e) {
-    alert('Network error: ' + (e.message || 'Could not reach checkout. Check the console.'));
-  } finally {
-    btn.forEach(b => { b.disabled = false; b.textContent = 'Start Challenge →'; });
+    alert('Error: ' + (e && e.message ? e.message : String(e)));
+    restoreBtn();
   }
 }
 
