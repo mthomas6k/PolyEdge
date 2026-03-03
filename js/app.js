@@ -1,3 +1,4 @@
+
 // ==========================================
 // CONFIG (uses js/config.js — set window.__POLYEDGE_ENV in production to avoid hardcoding)
 // ==========================================
@@ -670,75 +671,16 @@ function showAdminTab(tab) {
 }
 
 // ==========================================
-// STRIPE CHECKOUT (redirect to Stripe; evaluation created via webhook)
+// STRIPE CHECKOUT (temporary minimal test)
 // ==========================================
 const PRICES = {
   '1step-500': 79, '1step-1000': 139, '1step-2000': 199,
   '2step-500': 59, '2step-1000': 119, '2step-2000': 179,
 };
 
+// Minimal test handler: just confirm wiring works
 async function startChallenge(type, size) {
-  alert('Start Challenge clicked — if you see this, the new script is running.');
-  var btn = document.querySelectorAll('.ch-btn');
-  function restoreBtn() { try { btn.forEach(function(b) { b.disabled = false; b.textContent = 'Start Challenge →'; }); } catch (_) {} }
-  try {
-    btn.forEach(function(b) { b.disabled = true; b.textContent = 'Checking…'; });
-  } catch (_) { alert('Could not update button'); restoreBtn(); return; }
-
-  try {
-    if (!currentUser) { showPage('login'); restoreBtn(); return; }
-    var url = getCreateCheckoutUrl();
-    if (!url) { alert('Checkout is not configured. Set SUPABASE_URL in config.'); restoreBtn(); return; }
-    if (!sb) { alert('Supabase is not loaded. Check your connection and config.'); restoreBtn(); return; }
-
-    var session = null;
-    try {
-      var data = await sb.auth.getSession();
-      session = data && data.data && data.data.session;
-    } catch (e) {
-      alert('Session error. Try signing in again.');
-      restoreBtn();
-      return;
-    }
-    if (!session) { showPage('login'); restoreBtn(); return; }
-
-    btn.forEach(function(b) { b.textContent = 'Redirecting…'; });
-    var res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + session.access_token,
-        'apikey': SUPABASE_KEY
-      },
-      body: JSON.stringify({
-        type: type === '2step' ? '2step' : '1step',
-        size: [500, 1000, 2000].includes(Number(size)) ? Number(size) : 500,
-        success_base_url: window.location.origin + (window.location.pathname || '/').replace(/\/$/, '')
-      })
-    });
-    var json = null;
-    try {
-      json = await res.json();
-    } catch (_) {
-      alert('Checkout server error (invalid response). Is the create-checkout Edge Function deployed?');
-      restoreBtn();
-      return;
-    }
-    if (!res.ok) {
-      alert(json && json.error ? json.error : 'Checkout failed.');
-      restoreBtn();
-      return;
-    }
-    if (json && json.url) {
-      window.location.href = json.url;
-      return;
-    }
-    alert('Checkout URL missing.');
-    restoreBtn();
-  } catch (e) {
-    alert('Error: ' + (e && e.message ? e.message : String(e)));
-    restoreBtn();
-  }
+  alert('StartChallenge TEST — type=' + type + ', size=' + size);
 }
 window.startChallenge = startChallenge;
 
