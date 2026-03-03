@@ -11,7 +11,7 @@ function getCreateCheckoutUrl() {
 // ==========================================
 // SUPABASE INIT (anon key only — never use service_role in frontend)
 // ==========================================
-let sb = null;
+var sb = typeof sb !== 'undefined' ? sb : null;
 try {
   if (typeof supabase !== 'undefined' && supabase.createClient && SUPABASE_URL && SUPABASE_KEY) {
     sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
