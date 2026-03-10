@@ -827,3 +827,4 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Init homepage animations
   setTimeout(() => HomepageAnimations.init(), 200);
 });
+console.log('app.js loaded, startChallenge:', typeof window.startChallenge);
