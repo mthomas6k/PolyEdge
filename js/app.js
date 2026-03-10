@@ -679,7 +679,151 @@ const PRICES = {
 };
 
 // Minimal test handler: just confirm wiring works
-   async function startChallenge(type, size) {
-     alert('StartChallenge TEST — type=' + type + ', size=' + size);
-   }
-   window.startChallenge = startChallenge;
+async function startChallenge(type, size) {
+  if (!currentUser) {
+    showPage('login');
+    return;
+  }
+
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { showPage('login'); return; }
+
+    const res = await fetch(getCreateCheckoutUrl(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token
+      },
+      body: JSON.stringify({
+        eval_type: type,
+        account_size: size,
+        price_usd: PRICES[type + '-' + size]
+      })
+    });
+
+    const data = await res.json();
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      alert('Checkout error: ' + (data?.error || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('Failed to start checkout: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Start Challenge →'; }
+  }
+}
+window.startChallenge = startChallenge;
+// ==========================================
+// NAVIGATION
+// ==========================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+
+  const page = document.getElementById('page-' + id);
+  if (page) { page.classList.add('active'); window.scrollTo(0, 0); }
+
+  const link = document.querySelector(`.nav-links a[data-page="${id}"]`);
+  if (link) link.classList.add('active');
+
+  // Load page-specific data
+  if (id === 'dashboard') loadDashboard();
+  if (id === 'leaderboard') loadLeaderboard();
+  if (id === 'admin' && currentProfile?.is_admin) loadAdmin();
+  if (id === 'analytics') loadAnalytics();
+  if (id === 'accounts') loadAccounts();
+  if (id === 'certificate') loadCertificate();
+
+  // Homepage animations
+  if (id === 'home') {
+    setTimeout(() => HomepageAnimations.init(), 100);
+  }
+}
+
+function bindDataPage() {
+  document.querySelectorAll('[data-page]').forEach(el => {
+    if (!el._bound) {
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        showPage(el.getAttribute('data-page'));
+        // Close mobile nav menu after navigation
+        const navLinks = document.getElementById('nav-links');
+        if (navLinks) navLinks.classList.remove('open');
+      });
+      el._bound = true;
+    }
+  });
+}
+
+function openModal(id) { const el = document.getElementById(id); if (el) el.classList.add('open'); }
+function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('open'); }
+
+// ==========================================
+// INIT
+// ==========================================
+document.addEventListener('DOMContentLoaded', async function() {
+  bindDataPage();
+
+  // Mobile nav toggle
+  const menuToggle = document.getElementById('nav-menu-toggle');
+  const navLinks = document.getElementById('nav-links');
+  if (menuToggle && navLinks) {
+    menuToggle.addEventListener('click', () => {
+      navLinks.classList.toggle('open');
+    });
+  }
+
+  // FAQ toggles
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      q.classList.toggle('open');
+      const a = q.nextElementSibling;
+      if (a) a.classList.toggle('open');
+    });
+  });
+
+  // Challenge type toggles
+  const t1 = document.getElementById('t1');
+  const t2 = document.getElementById('t2');
+  const s1 = document.getElementById('s1');
+  const s2 = document.getElementById('s2');
+  if (t1 && t2 && s1 && s2) {
+    t1.addEventListener('click', () => {
+      t1.classList.add('active'); t2.classList.remove('active');
+      s1.classList.add('active'); s2.classList.remove('active');
+    });
+    t2.addEventListener('click', () => {
+      t2.classList.add('active'); t1.classList.remove('active');
+      s2.classList.add('active'); s1.classList.remove('active');
+    });
+  }
+
+  // Start Challenge is handled by inline onclick (so it works even if this block runs late)
+
+  // Modal close on backdrop
+  document.querySelectorAll('.modal-bg').forEach(bg => {
+    bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+  });
+
+  // Payment success / cancel
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('payment') === 'success') {
+    window.history.replaceState({}, '', window.location.pathname || '/');
+    await checkSession();
+    alert('Payment received! Your evaluation will be activated shortly.');
+    showPage('dashboard');
+  } else if (params.get('payment') === 'cancelled') {
+    window.history.replaceState({}, '', window.location.pathname || '/');
+  }
+
+  // Init session
+  await checkSession();
+
+  // Init homepage animations
+  setTimeout(() => HomepageAnimations.init(), 200);
+});
