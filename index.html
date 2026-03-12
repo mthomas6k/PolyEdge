@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>PolyEdge — Polymarket Prop Betting</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ========== NAV ========== -->
+  <nav>
+    <div class="nav-logo" onclick="showPage('home')">
+      <span class="dot"></span> POLYEDGE
+    </div>
+    <button class="nav-menu-toggle" id="nav-menu-toggle" aria-label="Toggle navigation">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a data-page="home" class="active">Home</a>
+      <a data-page="challenges">Challenges</a>
+      <a data-page="rules">Rules</a>
+      <a data-page="leaderboard">Leaderboard</a>
+      <a data-page="analytics">Analytics</a>
+      <a data-page="dashboard" class="auth-only">Dashboard</a>
+      <a data-page="accounts" class="auth-only">Accounts</a>
+      <a data-page="admin" class="admin-only">Admin</a>
+    </div>
+    <div class="nav-right">
+      <span class="nav-user" id="nav-user"></span>
+      <button class="nav-cta" id="nav-auth-btn" data-page="login">Sign In</button>
+      <button class="nav-cta ghost" id="nav-logout-btn" style="display:none" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- ========== HOME ========== -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <div class="hero-tag">Prediction Market Prop Betting</div>
+      <h1 class="hero-headline">Prove Your <span>Edge</span>.<br>Get Funded.</h1>
+      <p>Trade Polymarket with our capital. Pass the evaluation, prove consistency, and scale up to a funded account with real USDC.</p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-counter" data-target="80" data-suffix="%" data-decimals="0">0%</div>
+          <div class="hero-stat-label">Profit Split</div>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <div class="stat-counter" data-target="2000" data-prefix="$" data-decimals="0">$0</div>
+          <div class="hero-stat-label">Max Account Size</div>
+        </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <div class="stat-counter" data-target="30" data-suffix=" days" data-decimals="0">0 days</div>
+          <div class="hero-stat-label">Time Limit</div>
+        </div>
+      </div>
+      <div class="hero-buttons">
+        <button class="btn btn-primary hero-cta-animated" data-page="challenges">View Challenges →</button>
+        <button class="btn btn-ghost" data-page="rules">How It Works</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-tag">How It Works</div>
+      <h2>Three Steps to Funded</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <h3>Choose a Challenge</h3>
+          <p>Pick your account size and evaluation type. One-Step for experienced bettors, Two-Step for a more gradual path.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <h3>Prove Consistency</h3>
+          <p>Bet on prediction markets. Hit the profit target while staying within drawdown limits and the consistency rule.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <h3>Get Funded</h3>
+          <p>Pass the evaluation and receive a funded account. Keep up to 80% of your profits with real USDC payouts.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-tag">FAQ</div>
+      <h2>Common Questions</h2>
+      <div class="faq-container">
+        <div class="faq-item">
+          <div class="faq-q">What markets can I bet on? <span class="arrow">+</span></div>
+          <div class="faq-a">You can bet on any active market on Polymarket. We track your positions through the platform's public API. Political, crypto, sports, entertainment — any market is fair game.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">How does the consistency rule work? <span class="arrow">+</span></div>
+          <div class="faq-a">No single trade can account for more than a set percentage of your total profits. This ensures you're a consistent trader, not just lucky on one big bet.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">What happens if I fail? <span class="arrow">+</span></div>
+          <div class="faq-a">If you breach the drawdown limit or time runs out without hitting the target, the evaluation ends. You can purchase a new challenge and try again at any time.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">How do payouts work? <span class="arrow">+</span></div>
+          <div class="faq-a">Funded traders keep 80% of profits. Payouts are processed in USDC on a bi-weekly basis once you hit the minimum payout threshold.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Is this real money? <span class="arrow">+</span></div>
+          <div class="faq-a">The evaluation uses simulated balance tracking. Once funded, you trade with our real capital on Polymarket. Profits and payouts are in real USDC.</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== FAQ PAGE ========== -->
+  <div id="page-faq" class="page">
+    <div class="section">
+      <div class="section-tag">FAQ</div>
+      <h2>Common Questions</h2>
+      <div class="faq-container">
+        <div class="faq-item">
+          <div class="faq-q">What markets can I bet on? <span class="arrow">+</span></div>
+          <div class="faq-a">You can bet on any active market on Polymarket. We track your positions through the platform's public API. Political, crypto, sports, entertainment — any market is fair game.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">How does the consistency rule work? <span class="arrow">+</span></div>
+          <div class="faq-a">No single trade can account for more than a set percentage of your total profits. This ensures you're a consistent bettor, not just lucky on one big bet.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">What happens if I fail? <span class="arrow">+</span></div>
+          <div class="faq-a">If you breach the drawdown limit or time runs out without hitting the target, the evaluation ends. You can purchase a new challenge and try again at any time.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">How do payouts work? <span class="arrow">+</span></div>
+          <div class="faq-a">Funded bettors keep 80% of profits. Payouts are processed in USDC on a bi-weekly basis once you hit the minimum payout threshold.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Is this real money? <span class="arrow">+</span></div>
+          <div class="faq-a">The evaluation uses simulated balance tracking. Once funded, you bet with our real capital on Polymarket. Profits and payouts are in real USDC.</div>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== CHALLENGES ========== -->
+  <div id="page-challenges" class="page">
+    <div class="section" style="text-align:center">
+      <div class="section-tag">Challenges</div>
+      <h2>Choose Your Path</h2>
+
+      <div class="challenge-toggle">
+        <button id="t1" class="active">One-Step</button>
+        <button id="t2">Two-Step</button>
+      </div>
+
+      <!-- ONE-STEP -->
+      <div id="s1" class="challenge-set active">
+        <div class="challenge-card">
+          <div class="ch-header">
+            <div class="ch-size">$500</div>
+            <div class="ch-label">Account Size</div>
+            <div class="ch-price">$79 <span>one-time</span></div>
+          </div>
+          <div class="ch-body">
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">10%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Min Trades</span><span class="v">5</span></div>
+            <div class="ch-row"><span class="l">Consistency Rule</span><span class="v">20%</span></div>
+            <div class="ch-row"><span class="l">Time Limit</span><span class="v">30 days</span></div>
+            <div class="ch-row"><span class="l">Profit Split</span><span class="v">80/20</span></div>
+            <button class="ch-btn" data-type="1step" data-size="500" onclick="if(window.startChallenge){window.startChallenge('1step',500);}else{alert('App script did not load. Open DevTools (F12) and check Console for errors.');} return false;">Start Challenge →</button>
+          </div>
+        </div>
+
+        <div class="challenge-card feat">
+          <div class="ch-header">
+            <div class="ch-size">$1,000</div>
+            <div class="ch-label">Account Size</div>
+            <div class="ch-price">$139 <span>one-time</span></div>
+          </div>
+          <div class="ch-body">
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">10%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Min Trades</span><span class="v">5</span></div>
+            <div class="ch-row"><span class="l">Consistency Rule</span><span class="v">20%</span></div>
+            <div class="ch-row"><span class="l">Time Limit</span><span class="v">30 days</span></div>
+            <div class="ch-row"><span class="l">Profit Split</span><span class="v">80/20</span></div>
+            <button class="ch-btn" data-type="1step" data-size="1000" onclick="if(window.startChallenge){window.startChallenge('1step',1000);}else{alert('App script did not load. Open DevTools (F12) and check Console for errors.');} return false;">Start Challenge →</button>
+          </div>
+        </div>
+
+        <div class="challenge-card">
+          <div class="ch-header">
+            <div class="ch-size">$2,000</div>
+            <div class="ch-label">Account Size</div>
+            <div class="ch-price">$199 <span>one-time</span></div>
+          </div>
+          <div class="ch-body">
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">10%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Min Trades</span><span class="v">5</span></div>
+            <div class="ch-row"><span class="l">Consistency Rule</span><span class="v">20%</span></div>
+            <div class="ch-row"><span class="l">Time Limit</span><span class="v">30 days</span></div>
+            <div class="ch-row"><span class="l">Profit Split</span><span class="v">80/20</span></div>
+            <button class="ch-btn" data-type="1step" data-size="2000" onclick="if(window.startChallenge){window.startChallenge('1step',2000);}else{alert('App script did not load. Open DevTools (F12) and check Console for errors.');} return false;">Start Challenge →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TWO-STEP -->
+      <div id="s2" class="challenge-set">
+        <div class="challenge-card">
+          <div class="ch-header">
+            <div class="ch-size">$500</div>
+            <div class="ch-label">Account Size</div>
+            <div class="ch-price">$59 <span>one-time</span></div>
+          </div>
+          <div class="ch-body">
+            <div class="phase-label">Phase 1</div>
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="phase-label">Phase 2</div>
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">4%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Profit Split</span><span class="v">80/20</span></div>
+            <button class="ch-btn" data-type="2step" data-size="500" onclick="if(window.startChallenge){window.startChallenge('2step',500);}else{alert('App script did not load. Open DevTools (F12) and check Console for errors.');} return false;">Start Challenge →</button>
+          </div>
+        </div>
+
+        <div class="challenge-card feat">
+          <div class="ch-header">
+            <div class="ch-size">$1,000</div>
+            <div class="ch-label">Account Size</div>
+            <div class="ch-price">$119 <span>one-time</span></div>
+          </div>
+          <div class="ch-body">
+            <div class="phase-label">Phase 1</div>
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="phase-label">Phase 2</div>
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">4%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Profit Split</span><span class="v">80/20</span></div>
+            <button class="ch-btn" data-type="2step" data-size="1000" onclick="if(window.startChallenge){window.startChallenge('2step',1000);}else{alert('App script did not load. Open DevTools (F12) and check Console for errors.');} return false;">Start Challenge →</button>
+          </div>
+        </div>
+
+        <div class="challenge-card">
+          <div class="ch-header">
+            <div class="ch-size">$2,000</div>
+            <div class="ch-label">Account Size</div>
+            <div class="ch-price">$179 <span>one-time</span></div>
+          </div>
+          <div class="ch-body">
+            <div class="phase-label">Phase 1</div>
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="phase-label">Phase 2</div>
+            <div class="ch-row"><span class="l">Profit Target</span><span class="v">4%</span></div>
+            <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
+            <div class="ch-row"><span class="l">Profit Split</span><span class="v">80/20</span></div>
+            <button class="ch-btn" data-type="2step" data-size="2000" onclick="if(window.startChallenge){window.startChallenge('2step',2000);}else{alert('App script did not load. Open DevTools (F12) and check Console for errors.');} return false;">Start Challenge →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== RULES ========== -->
+  <div id="page-rules" class="page">
+    <div class="section">
+      <div class="section-tag">Rules</div>
+      <h2>Evaluation Rules</h2>
+      <div class="rules-container">
+        <div class="rule-block">
+          <h3><span class="n">1</span> Profit Target</h3>
+          <p>You must reach the profit target percentage within the time limit. One-Step requires 10%, Two-Step requires 6% (Phase 1) then 4% (Phase 2).</p>
+        </div>
+        <div class="rule-block">
+          <h3><span class="n">2</span> Maximum Drawdown</h3>
+          <p>Your account cannot drop more than 6% from its high-water mark at any point. If it does, the evaluation is immediately failed.</p>
+        </div>
+        <div class="rule-block">
+          <h3><span class="n">3</span> Consistency Rule</h3>
+          <p>No single winning trade can account for more than the allowed percentage of your total profits. This prevents lucky one-shot traders.</p>
+          <table class="rt">
+            <tr><td>One-Step consistency cap</td><td>20% of total profit</td></tr>
+            <tr><td>Two-Step consistency cap</td><td>50% of total profit</td></tr>
+          </table>
+        </div>
+        <div class="rule-block">
+          <h3><span class="n">4</span> Minimum Trades</h3>
+          <p>You must complete the minimum number of trades before the evaluation can pass. One-Step requires 5 trades, Two-Step requires 2 per phase.</p>
+        </div>
+        <div class="rule-block">
+          <h3><span class="n">5</span> Position Sizing</h3>
+          <p>No single position can exceed 15% of your current account balance. This ensures proper risk management.</p>
+        </div>
+        <div class="rule-block">
+          <h3><span class="n">6</span> Time Limit</h3>
+          <p>Each phase has a 30-day time limit. You must hit all targets within this window or the evaluation expires.</p>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== LEADERBOARD ========== -->
+  <div id="page-leaderboard" class="page">
+    <div class="section">
+      <div class="section-tag">Leaderboard</div>
+      <h2>Funded Traders</h2>
+      <div id="lb-content">
+        <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
+      </div>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== ANALYTICS ========== -->
+  <div id="page-analytics" class="page">
+    <div id="analytics-content">
+      <!-- Rendered by analytics.js -->
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== DASHBOARD ========== -->
+  <div id="page-dashboard" class="page">
+    <div id="dash-content" style="padding:20px">
+      <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== ACCOUNTS ========== -->
+  <div id="page-accounts" class="page">
+    <div id="accounts-content" style="padding:20px">
+      <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
+    </div>
+    <footer>© 2025 PolyProp — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== CERTIFICATE ========== -->
+  <div id="page-certificate" class="page">
+    <div class="section" style="text-align:center">
+      <div class="cert-wrapper">
+        <div class="cert-card">
+          <div class="cert-glow"></div>
+          <div class="cert-inner">
+            <div class="cert-logo">◎ POLYPROP</div>
+            <div class="cert-divider"></div>
+            <div class="cert-title">CERTIFICATE OF ACHIEVEMENT</div>
+            <div class="cert-subtitle">THE EVALUATION STAGE</div>
+            <div class="cert-phase">PHASE I</div>
+            <div class="cert-date">DATE: <span id="cert-date-val">—</span></div>
+            <div class="cert-presented">PROUDLY PRESENTED TO</div>
+            <div class="cert-name" id="cert-name-val">TRADER NAME</div>
+            <div class="cert-footer">
+              <div class="cert-brand">◎ PolyEdge</div>
+              <div class="cert-qr">
+                <div class="cert-qr-placeholder">
+                  <svg width="64" height="64" viewBox="0 0 64 64"><rect x="0" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="0" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="0" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="16" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="32" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="0" y="44" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cert-actions">
+          <button class="cert-dl-btn" onclick="alert('Download feature coming soon')">↓ PNG</button>
+          <button class="cert-dl-btn" onclick="alert('Download feature coming soon')">↓ PDF</button>
+          <button class="cert-dl-btn" onclick="alert('Copy feature coming soon')">⊡ Image</button>
+          <button class="cert-dl-btn" onclick="alert('Link feature coming soon')">↗ Link</button>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== EDUCATION ========== -->
+  <div id="page-education" class="page">
+    <div class="section edu-section">
+      <div class="section-tag">Learn</div>
+      <h2>What Are Prediction-Based Markets?</h2>
+
+      <div class="edu-content">
+        <div class="edu-block">
+          <div class="edu-num">01</div>
+          <h3>What Are Prediction Markets?</h3>
+          <p>Prediction markets are exchange-traded markets where participants buy and sell contracts that pay out based on the outcome of future events. Each contract resolves to $1.00 if the event occurs and $0.00 if it doesn't. The current trading price represents the market's collective estimate of the probability of that event happening.</p>
+          <p>For example, if a contract "Will X happen by December?" trades at $0.65, the market collectively estimates a 65% probability of that event occurring.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">02</div>
+          <h3>How They Work</h3>
+          <p>Participants trade binary outcome contracts on a prediction market exchange. You can buy "Yes" shares if you believe the event will happen, or "No" shares if you believe it won't. Prices fluctuate between $0.01 and $0.99 based on supply and demand, reflecting the market's evolving probability estimate.</p>
+          <p>When the event resolves, winning shares pay out $1.00 each, and losing shares expire worthless. Your profit is the difference between your entry price and the $1.00 payout, minus any trading fees.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">03</div>
+          <h3>Risk Profile</h3>
+          <p>Prediction markets carry defined risk. When you buy a contract at $0.65, your maximum loss is the $0.65 you paid, and your maximum profit is $0.35 (the $1.00 payout minus your cost). This binary structure means you always know your worst-case scenario before entering a position.</p>
+          <p>However, prices can move against you before resolution, creating unrealized losses. Position sizing and portfolio diversification are critical risk management tools.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">04</div>
+          <h3>Expected Value</h3>
+          <p>Profitable prediction market trading is fundamentally about finding mispriced contracts — situations where the true probability of an event differs from the price the market assigns. If you believe an event has a 75% chance of occurring but the market prices it at 60%, buying that contract has positive expected value.</p>
+          <p>Expected value (EV) = (Probability × Payout) − Cost. Consistent profitability requires disciplined analysis and a systematic approach to identifying edge.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">05</div>
+          <h3>Market Inefficiencies</h3>
+          <p>Prediction markets, like all markets, can be inefficient. Inefficiencies arise from information asymmetry, behavioral biases (overconfidence, anchoring, recency bias), liquidity imbalances, and delayed reactions to breaking information. These inefficiencies create opportunities for informed traders.</p>
+          <p>Common patterns include slow price adjustments after news events, overreaction to unlikely tail risks, and systematic mispricing in niche or low-volume markets.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">06</div>
+          <h3>How Traders Profit</h3>
+          <p>Successful prediction market traders combine deep domain expertise with disciplined risk management. They analyze events using primary sources, statistical models, and domain-specific knowledge to develop independent probability estimates. When those estimates diverge meaningfully from market prices, they trade.</p>
+          <p>Key principles include diversifying across uncorrelated events, sizing positions according to confidence level, and continuously updating probability estimates as new information emerges.</p>
+        </div>
+
+        <div class="edu-block">
+          <div class="edu-num">07</div>
+          <h3>Potential Upside</h3>
+          <p>Prediction markets are a rapidly growing asset class with expanding coverage across politics, economics, sports, technology, and current events. As these markets mature, liquidity deepens and the range of tradable events expands.</p>
+          <p>For skilled analysts with domain expertise, prediction markets offer a unique opportunity to monetize knowledge and analytical ability. Unlike traditional financial markets, prediction markets reward subject-matter expertise directly — if you understand politics, science, technology, or any other domain better than the average market participant, you have a structural edge.</p>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== LOGIN ========== -->
+  <div id="page-login" class="page">
+    <div id="auth-login">
+      <div class="auth-box">
+        <h2>Sign In</h2>
+        <div class="sub">Access your dashboard and evaluations</div>
+        <div class="msg msg-err" id="login-err"></div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="login-email" type="email" placeholder="you@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="login-pass" type="password" placeholder="••••••••">
+        </div>
+        <button class="form-btn" onclick="login()">Sign In →</button>
+        <div class="auth-toggle">Don't have an account? <a onclick="toggleAuth('register')">Register</a></div>
+      </div>
+    </div>
+    <div id="auth-register" style="display:none">
+      <div class="auth-box">
+        <h2>Register</h2>
+        <div class="sub">Create your account to get started</div>
+        <div class="msg msg-err" id="reg-err"></div>
+        <div class="msg msg-ok" id="reg-ok"></div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="reg-email" type="email" placeholder="you@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="reg-pass" type="password" placeholder="Min 6 characters">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input class="form-input" id="reg-pass2" type="password" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Polymarket Wallet (optional)</label>
+          <input class="form-input" id="reg-wallet" type="text" placeholder="0x...">
+        </div>
+        <button class="form-btn" onclick="register()">Create Account →</button>
+        <div class="auth-toggle">Already have an account? <a onclick="toggleAuth('login')">Sign In</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== ADMIN ========== -->
+  <div id="page-admin" class="page">
+    <div class="section">
+      <div class="section-tag">Admin</div>
+      <h2>Administration</h2>
+      <div class="admin-tabs">
+        <button class="active" onclick="showAdminTab('users')">Users</button>
+        <button onclick="showAdminTab('evals')">Evaluations</button>
+        <button onclick="showAdminTab('create')">Create Eval</button>
+      </div>
+      <div id="admin-users" class="admin-section active"></div>
+      <div id="admin-evals" class="admin-section"></div>
+      <div id="admin-create" class="admin-section">
+        <div style="max-width:480px">
+          <div class="msg msg-err" id="admin-create-err"></div>
+          <div class="msg msg-ok" id="admin-create-ok"></div>
+          <div class="form-group">
+            <label class="form-label">User Email</label>
+            <input class="form-input" id="ac-email" placeholder="user@email.com">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-select" id="ac-type">
+                <option value="1-step">One-Step</option>
+                <option value="2-step">Two-Step</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Size</label>
+              <select class="form-select" id="ac-size">
+                <option value="500">$500</option>
+                <option value="1000">$1,000</option>
+                <option value="2000">$2,000</option>
+              </select>
+            </div>
+          </div>
+          <button class="form-btn" onclick="adminCreateEval()">Create Evaluation →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODALS ========== -->
+
+  <!-- New Trade Modal -->
+  <div class="modal-bg" id="trade-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('trade-modal')">✕</button>
+      <h3>Open New Trade</h3>
+      <div class="msg msg-err" id="trade-err"></div>
+      <div class="form-group">
+        <label class="form-label">Contract Name</label>
+        <input class="form-input" id="tr-name" placeholder="e.g. Will Trump win 2028?">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Side</label>
+          <select class="form-select" id="tr-side">
+            <option value="YES">YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Entry Price (¢)</label>
+          <input class="form-input" id="tr-entry" type="number" placeholder="e.g. 65" min="1" max="99">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Trade Size ($)</label>
+        <input class="form-input" id="tr-size" type="number" placeholder="e.g. 50" min="1">
+      </div>
+      <button class="form-btn" onclick="openTrade()">Place Trade →</button>
+    </div>
+  </div>
+
+  <!-- Close Trade Modal -->
+  <div class="modal-bg" id="close-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('close-modal')">✕</button>
+      <h3>Close Position</h3>
+      <div class="msg msg-err" id="close-err"></div>
+      <p id="close-info" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:20px"></p>
+      <div class="form-group">
+        <label class="form-label">Exit Price (¢)</label>
+        <input class="form-input" id="cl-exit" type="number" placeholder="e.g. 78" min="1" max="99">
+      </div>
+      <button class="form-btn" onclick="closeTrade()">Close Trade →</button>
+    </div>
+  </div>
+
+  <!-- Bet from Dashboard Modal -->
+  <div class="modal-bg" id="market-bet-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('market-bet-modal')">✕</button>
+      <h3>Place Bet</h3>
+      <div class="msg msg-err" id="mbet-err"></div>
+      <p id="mbet-market-info" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:16px"></p>
+      <input type="hidden" id="mbet-market-name">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Side</label>
+          <select class="form-select" id="mbet-side">
+            <option value="YES">YES</option>
+            <option value="NO">NO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Entry Price (¢)</label>
+          <input class="form-input" id="mbet-entry" type="number" min="1" max="99">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Trade Size ($)</label>
+        <input class="form-input" id="mbet-size" type="number" placeholder="e.g. 50" min="1">
+      </div>
+      <button class="form-btn" onclick="placeDashboardBet()">Place Bet →</button>
+    </div>
+  </div>
+
+  <!-- ========== BOTTOM NAVIGATION ========== -->
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-inner">
+      <div class="bottom-nav-group">
+        <span class="bottom-nav-label">Navigate</span>
+        <a data-page="home">Home</a>
+        <a data-page="challenges">Challenges</a>
+        <a data-page="rules">Rules</a>
+        <a data-page="leaderboard">Leaderboard</a>
+        <a data-page="analytics">Analytics</a>
+        <a data-page="dashboard" class="auth-only">Dashboard</a>
+        <a data-page="accounts" class="auth-only">Accounts</a>
+      </div>
+      <div class="bottom-nav-group">
+        <span class="bottom-nav-label">Resources</span>
+        <a data-page="certificate">Certificate</a>
+        <a data-page="education">Prediction Markets</a>
+        <a data-page="faq">FAQ</a>
+      </div>
+      <div class="bottom-nav-group">
+        <span class="bottom-nav-label">PolyEdge</span>
+        <span class="bottom-nav-copy">© 2025 PolyEdge</span>
+        <span class="bottom-nav-copy">All Rights Reserved</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SCRIPTS ========== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- Optional: load env.config.js in production so anon key/URL come from env (see js/env.example.js) -->
+  <script src="js/env.config.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/polymarketService.js"></script>
+  <script src="js/calendarComponent.js"></script>
+  <script src="js/accountManager.js"></script>
+  <script src="js/homepageAnimations.js"></script>
+  <script src="js/analytics.js?v=6"></script>
+  <script src="js/app.js?v=7"></script>
+
+</body>
+</html>
