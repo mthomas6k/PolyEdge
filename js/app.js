@@ -697,13 +697,13 @@ async function startChallenge(type, size) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + session.access_token
+        'apikey': SUPABASE_KEY
       },
       body: JSON.stringify({
         type: type,
         size: size,
       })      
     });
-
     const data = await res.json();
     if (data?.url) {
       window.location.href = data.url;
