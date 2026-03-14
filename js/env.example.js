@@ -8,10 +8,17 @@
 // 3. js/env.config.js is in .gitignore so you never commit real keys.
 //
 // When env.config.js exists and is loaded before config.js, the app uses these values instead of defaults.
+<<<<<<< HEAD
 // STRIPE_PUBLISHABLE_KEY is optional (used if you add Stripe.js later); only the publishable key goes in the frontend.
 
 window.__POLYEDGE_ENV = {
   SUPABASE_URL: 'https://YOUR_PROJECT_REF.supabase.co',
   SUPABASE_ANON_KEY: 'your-anon-public-key-here',
   STRIPE_PUBLISHABLE_KEY: 'pk_test_...'  // optional
+=======
+
+window.__POLYEDGE_ENV = {
+  SUPABASE_URL: 'https://YOUR_PROJECT_REF.supabase.co',
+  SUPABASE_ANON_KEY: 'your-anon-public-key-here'
+>>>>>>> 0044020ade8d36dff50037d00ef8c28a7b529764
 };
