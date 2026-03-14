@@ -696,7 +696,7 @@ async function startChallenge(type, size) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + session.access_token
+        'Authorization': 'Bearer ' + session.access_token,
         'apikey': SUPABASE_KEY
       },
       body: JSON.stringify({
