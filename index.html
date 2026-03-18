@@ -15,7 +15,7 @@
   <!-- ========== NAV ========== -->
   <nav>
     <div class="nav-logo" onclick="showPage('home')">
-      <span class="dot"></span> POLYEDGE
+      <span class="dot"></span> PolyEdge
     </div>
     <button class="nav-menu-toggle" id="nav-menu-toggle" aria-label="Toggle navigation">
       <span></span>
@@ -27,9 +27,11 @@
       <a data-page="challenges">Challenges</a>
       <a data-page="rules">Rules</a>
       <a data-page="leaderboard">Leaderboard</a>
-      <a data-page="analytics">Analytics</a>
+      <a data-page="polymarket" class="auth-only">Polymarket</a>
+      <a data-page="stats" class="auth-only">PolyEdge Stats</a>
       <a data-page="dashboard" class="auth-only">Dashboard</a>
       <a data-page="accounts" class="auth-only">Accounts</a>
+      <a data-page="settings" class="auth-only">Settings</a>
       <a data-page="admin" class="admin-only">Admin</a>
     </div>
     <div class="nav-right">
@@ -326,10 +328,18 @@
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
-  <!-- ========== ANALYTICS ========== -->
-  <div id="page-analytics" class="page">
+  <!-- ========== POLYMARKET ANALYTICS ========== -->
+  <div id="page-polymarket" class="page">
     <div id="analytics-content">
-      <!-- Rendered by analytics.js -->
+      <!-- Rendered by analytics.js (Polymarket wallet analytics) -->
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
+  <!-- ========== POLYEDGE INTERNAL STATS ========== -->
+  <div id="page-stats" class="page">
+    <div id="stats-content" style="max-width:1200px;margin:0 auto;padding:28px 32px">
+      <!-- Rendered by app.js (Supabase evaluation stats) -->
     </div>
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
@@ -347,40 +357,14 @@
     <div id="accounts-content" style="padding:20px">
       <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
     </div>
-    <footer>© 2025 PolyProp — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
-  <!-- ========== CERTIFICATE ========== -->
+  <!-- ========== CERTIFICATES ========== -->
   <div id="page-certificate" class="page">
     <div class="section" style="text-align:center">
-      <div class="cert-wrapper">
-        <div class="cert-card">
-          <div class="cert-glow"></div>
-          <div class="cert-inner">
-            <div class="cert-logo">◎ POLYPROP</div>
-            <div class="cert-divider"></div>
-            <div class="cert-title">CERTIFICATE OF ACHIEVEMENT</div>
-            <div class="cert-subtitle">THE EVALUATION STAGE</div>
-            <div class="cert-phase">PHASE I</div>
-            <div class="cert-date">DATE: <span id="cert-date-val">—</span></div>
-            <div class="cert-presented">PROUDLY PRESENTED TO</div>
-            <div class="cert-name" id="cert-name-val">TRADER NAME</div>
-            <div class="cert-footer">
-              <div class="cert-brand">◎ PolyEdge</div>
-              <div class="cert-qr">
-                <div class="cert-qr-placeholder">
-                  <svg width="64" height="64" viewBox="0 0 64 64"><rect x="0" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="0" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="0" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="16" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="32" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="0" y="44" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/></svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="cert-actions">
-          <button class="cert-dl-btn" onclick="alert('Download feature coming soon')">↓ PNG</button>
-          <button class="cert-dl-btn" onclick="alert('Download feature coming soon')">↓ PDF</button>
-          <button class="cert-dl-btn" onclick="alert('Copy feature coming soon')">⊡ Image</button>
-          <button class="cert-dl-btn" onclick="alert('Link feature coming soon')">↗ Link</button>
-        </div>
+      <div class="cert-wrapper" id="certificates-root">
+        <!-- Rendered by loadCertificate in app.js -->
       </div>
     </div>
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
@@ -491,6 +475,39 @@
         <div class="auth-toggle">Already have an account? <a onclick="toggleAuth('login')">Sign In</a></div>
       </div>
     </div>
+  </div>
+
+  <!-- ========== SETTINGS ========== -->
+  <div id="page-settings" class="page">
+    <div class="section" style="max-width:720px;margin:0 auto">
+      <div class="section-tag">Account</div>
+      <h2>Settings</h2>
+      <div class="settings-card">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input class="form-input" id="settings-first-name" type="text" placeholder="First name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" id="settings-last-name" type="text" placeholder="Last name">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input class="form-input" id="settings-display-name" type="text" placeholder="How your name appears">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Polymarket Wallet</label>
+          <input class="form-input" id="settings-wallet" type="text" placeholder="0x...">
+        </div>
+        <div class="settings-actions">
+          <button class="form-btn" style="width:auto" onclick="saveSettings()">Save Settings →</button>
+          <span id="settings-status" class="settings-status"></span>
+        </div>
+      </div>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
   <!-- ========== ADMIN ========== -->
@@ -622,9 +639,11 @@
         <a data-page="challenges">Challenges</a>
         <a data-page="rules">Rules</a>
         <a data-page="leaderboard">Leaderboard</a>
-        <a data-page="analytics">Analytics</a>
+        <a data-page="polymarket" class="auth-only">Polymarket</a>
+        <a data-page="stats" class="auth-only">PolyEdge Stats</a>
         <a data-page="dashboard" class="auth-only">Dashboard</a>
         <a data-page="accounts" class="auth-only">Accounts</a>
+        <a data-page="settings" class="auth-only">Settings</a>
       </div>
       <div class="bottom-nav-group">
         <span class="bottom-nav-label">Resources</span>

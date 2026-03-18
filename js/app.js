@@ -599,17 +599,426 @@ async function loadAccounts() {
 }
 
 // ==========================================
-// CERTIFICATE PAGE
+// SETTINGS PAGE
 // ==========================================
-function loadCertificate() {
-  const dateEl = document.getElementById('cert-date-val');
-  const nameEl = document.getElementById('cert-name-val');
-  if (dateEl) {
-    dateEl.textContent = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+function loadSettings() {
+  if (!currentUser || !currentProfile) {
+    const status = document.getElementById('settings-status');
+    if (status) {
+      status.textContent = 'Sign in to manage settings';
+      status.className = 'settings-status warn';
+    }
+    return;
   }
-  if (nameEl && currentProfile) {
-    nameEl.textContent = (currentProfile.display_name || currentUser?.email?.split('@')[0] || 'TRADER').toUpperCase();
+  const firstEl = document.getElementById('settings-first-name');
+  const lastEl = document.getElementById('settings-last-name');
+  const displayEl = document.getElementById('settings-display-name');
+  const walletEl = document.getElementById('settings-wallet');
+  if (firstEl) firstEl.value = currentProfile.first_name || '';
+  if (lastEl) lastEl.value = currentProfile.last_name || '';
+  if (displayEl) displayEl.value = currentProfile.display_name || '';
+  if (walletEl) walletEl.value = currentProfile.polymarket_wallet || '';
+  const status = document.getElementById('settings-status');
+  if (status) {
+    status.textContent = '';
+    status.className = 'settings-status';
   }
+}
+
+async function saveSettings() {
+  if (!sb || !currentUser) return;
+  const first = document.getElementById('settings-first-name')?.value?.trim() || '';
+  const last = document.getElementById('settings-last-name')?.value?.trim() || '';
+  const display = document.getElementById('settings-display-name')?.value?.trim() || '';
+  const wallet = document.getElementById('settings-wallet')?.value?.trim() || '';
+  const status = document.getElementById('settings-status');
+  if (status) {
+    status.textContent = 'Saving...';
+    status.className = 'settings-status saving';
+  }
+  try {
+    const { error, data } = await sb.from('profiles')
+      .update({
+        first_name: first || null,
+        last_name: last || null,
+        display_name: display || null,
+        polymarket_wallet: wallet || null
+      })
+      .eq('id', currentUser.id)
+      .select()
+      .single();
+    if (error) throw error;
+    currentProfile = data || currentProfile;
+    if (status) {
+      status.textContent = 'Saved';
+      status.className = 'settings-status ok';
+    }
+    updateAuthUI(true);
+  } catch (e) {
+    console.error('saveSettings failed:', e);
+    if (status) {
+      status.textContent = e.message || 'Failed to save';
+      status.className = 'settings-status err';
+    }
+  }
+}
+
+// ==========================================
+// POLYEDGE INTERNAL STATS (Supabase-only)
+// ==========================================
+async function loadPolyEdgeStats() {
+  const container = document.getElementById('stats-content');
+  if (!container) return;
+  if (!currentUser || !sb) {
+    container.innerHTML = '<div class="an-center"><div class="an-connect-box"><h2>Sign In to View Stats</h2><p>Your PolyEdge stats are only available when you are logged in.</p><button class="form-btn" data-page="login">Sign In →</button></div></div>';
+    bindDataPage();
+    return;
+  }
+
+  const selectedAccount = AccountManager.getSelected();
+  if (!selectedAccount) {
+    container.innerHTML = '<div class="an-center"><div class="an-connect-box"><h2>No Active Evaluation</h2><p>Select an account on the Accounts page to view its stats.</p><button class="form-btn" data-page="accounts">View Accounts →</button></div></div>';
+    bindDataPage();
+    return;
+  }
+
+  container.innerHTML = '<div class="an-center"><div class="an-loading"><div class="an-spinner"></div><div class="an-loading-text">Loading PolyEdge stats<span class="an-dots"></span></div></div></div>';
+  let d = 0;
+  const iv = setInterval(() => {
+    const dotsEl = container.querySelector('.an-dots');
+    if (!dotsEl) { clearInterval(iv); return; }
+    dotsEl.textContent = ['.', '..', '...'][d++ % 3];
+  }, 400);
+
+  try {
+    const { data: trades } = await sb.from('trades')
+      .select('*')
+      .eq('evaluation_id', selectedAccount.id)
+      .eq('status', 'closed')
+      .order('closed_at', { ascending: true });
+    const closedTrades = trades || [];
+
+    const totalPnl = closedTrades.reduce((s, t) => s + parseFloat(t.pnl || 0), 0);
+    const wins = closedTrades.filter(t => t.pnl > 0);
+    const losses = closedTrades.filter(t => t.pnl < 0);
+    const winRate = closedTrades.length ? (wins.length / closedTrades.length * 100) : 0;
+    const bestTrade = closedTrades.reduce((b, t) => (b === null || t.pnl > b.pnl) ? t : b, null);
+    const worstTrade = closedTrades.reduce((b, t) => (b === null || t.pnl < b.pnl) ? t : b, null);
+
+    const dailyPnl = {};
+    closedTrades.forEach(t => {
+      const day = (t.closed_at || '').slice(0, 10);
+      if (!day) return;
+      if (!dailyPnl[day]) dailyPnl[day] = 0;
+      dailyPnl[day] += parseFloat(t.pnl || 0);
+    });
+    const days = Object.keys(dailyPnl).sort();
+    let cum = 0;
+    const cumPnl = days.map(d => {
+      cum += dailyPnl[d];
+      return { date: d, pnl: parseFloat(cum.toFixed(2)) };
+    });
+
+    container.innerHTML = `
+      <div class="an-header">
+        <div class="an-header-left">
+          <h1 class="an-title">PolyEdge Stats</h1>
+          <div class="an-wallet-badge" style="margin-top:8px">
+            <span class="an-wallet-dot"></span>
+            <span class="an-wallet-addr">Account: $${Number(selectedAccount.account_size).toLocaleString()} · ${selectedAccount.eval_type} · Phase ${selectedAccount.phase}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="an-kpis">
+        <div class="an-kpi">
+          <div class="an-kpi-label">Total P&L</div>
+          <div class="an-kpi-val" style="color:${totalPnl >= 0 ? 'var(--green)' : 'var(--red)'}">${totalPnl >= 0 ? '+' : ''}$${Math.abs(totalPnl).toFixed(2)}</div>
+          <div class="an-kpi-sub">closed trades only</div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">Win Rate</div>
+          <div class="an-kpi-val" style="color:${winRate >= 50 ? 'var(--green)' : 'var(--red)'}">${winRate.toFixed(1)}%</div>
+          <div class="an-kpi-sub">${wins.length}W / ${losses.length}L</div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">Closed Trades</div>
+          <div class="an-kpi-val">${closedTrades.length}</div>
+          <div class="an-kpi-sub">PolyEdge platform only</div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">Best Trade</div>
+          <div class="an-kpi-val" style="color:var(--green)">${bestTrade ? ('+$' + Number(bestTrade.pnl).toFixed(2)) : '$0.00'}</div>
+          <div class="an-kpi-sub">${bestTrade ? (bestTrade.contract_name || '—') : '—'}</div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">Worst Trade</div>
+          <div class="an-kpi-val" style="color:var(--red)">${worstTrade ? ('$' + Number(worstTrade.pnl).toFixed(2)) : '$0.00'}</div>
+          <div class="an-kpi-sub">${worstTrade ? (worstTrade.contract_name || '—') : '—'}</div>
+        </div>
+      </div>
+
+      <div class="an-grid">
+        <div class="an-card an-card-wide">
+          <div class="an-card-header">
+            <span class="an-card-title">Cumulative P&L</span>
+            <div class="an-chart-legend">
+              <span class="an-leg-dot" style="background:var(--accent)"></span>
+              <span>Closed-trade P&L over time</span>
+            </div>
+          </div>
+          ${cumPnl.length ? '<div class="an-chart-wrap"><canvas id="stats-pnl-chart"></canvas></div>' : '<div class="an-empty-chart">No closed trades yet</div>'}
+        </div>
+
+        <div class="an-card">
+          <div class="an-card-header"><span class="an-card-title">Best Trade</span></div>
+          ${bestTrade ? `
+            <div class="an-bw-item an-bw-best">
+              <div class="an-bw-label">↑ Best Trade</div>
+              <div class="an-bw-title">${truncate(bestTrade.contract_name || '—', 40)}</div>
+              <div class="an-bw-val" style="color:var(--green)">+$${Number(bestTrade.pnl).toFixed(2)}</div>
+            </div>` : '<div class="an-empty-state">No closed trades yet</div>'}
+        </div>
+
+        <div class="an-card">
+          <div class="an-card-header"><span class="an-card-title">Worst Trade</span></div>
+          ${worstTrade ? `
+            <div class="an-bw-item an-bw-worst">
+              <div class="an-bw-label">↓ Worst Trade</div>
+              <div class="an-bw-title">${truncate(worstTrade.contract_name || '—', 40)}</div>
+              <div class="an-bw-val" style="color:var(--red)">$${Number(worstTrade.pnl).toFixed(2)}</div>
+            </div>` : '<div class="an-empty-state">No closed trades yet</div>'}
+        </div>
+
+        <div class="an-card">
+          <div class="an-card-header"><span class="an-card-title">Summary</span></div>
+          <div class="an-tooltip">
+            Closed trades only. P&L and win rate are based on trades recorded through the PolyEdge platform.
+          </div>
+        </div>
+      </div>
+
+      <div id="stats-calendar"></div>
+    `;
+
+    if (cumPnl.length) {
+      requestAnimationFrame(() => drawStatsPnlChart(cumPnl));
+    }
+
+    await (async () => {
+      const { data: allClosed } = await sb.from('trades')
+        .select('*')
+        .eq('evaluation_id', selectedAccount.id)
+        .eq('status', 'closed')
+        .order('closed_at', { ascending: false });
+      CalendarComponent.setTrades(allClosed || []);
+      CalendarComponent.render('stats-calendar');
+    })();
+  } catch (e) {
+    console.error('loadPolyEdgeStats failed:', e);
+    container.innerHTML = '<div class="an-center"><div class="an-error-box"><h3>Failed to Load Stats</h3><p>' + (e.message || 'Unknown error') + '</p></div></div>';
+  }
+}
+
+function drawStatsPnlChart(cumPnl) {
+  const canvas = document.getElementById('stats-pnl-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth || canvas.offsetWidth || 600;
+  const H = 200;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+
+  const vals = cumPnl.map(d => d.pnl);
+  const labels = cumPnl.map(d => d.date.slice(5));
+  const min = Math.min(...vals, 0);
+  const max = Math.max(...vals, 0);
+  const range = max - min || 1;
+  const pad = { t: 20, r: 20, b: 36, l: 56 };
+  const w = W - pad.l - pad.r;
+  const h = H - pad.t - pad.b;
+
+  const toX = (i) => pad.l + (vals.length > 1 ? (i / (vals.length - 1)) * w : w / 2);
+  const toY = (v) => pad.t + (1 - (v - min) / range) * h;
+
+  ctx.setLineDash([3, 4]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1;
+  const zeroY = toY(0);
+  ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(pad.l + w, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.font = "10px 'JetBrains Mono', monospace";
+  ctx.fillStyle = '#4a5878';
+  ctx.textAlign = 'right';
+  [min, (min + max) / 2, max].forEach(v => {
+    ctx.fillText((v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(0), pad.l - 6, toY(v) + 4);
+  });
+
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(labels.length / 6));
+  for (let i = 0; i < labels.length; i += step) {
+    ctx.fillText(labels[i], toX(i), H - 8);
+  }
+
+  const lastVal = vals[vals.length - 1] || 0;
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + h);
+  if (lastVal >= 0) {
+    grad.addColorStop(0, 'rgba(64,176,128,0.25)');
+    grad.addColorStop(1, 'rgba(64,176,128,0.01)');
+  } else {
+    grad.addColorStop(0, 'rgba(208,72,72,0.01)');
+    grad.addColorStop(1, 'rgba(208,72,72,0.25)');
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(toX(0), toY(vals[0]));
+  vals.forEach((v, i) => { if (i > 0) ctx.lineTo(toX(i), toY(v)); });
+  ctx.lineTo(toX(vals.length - 1), pad.t + h);
+  ctx.lineTo(toX(0), pad.t + h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  const lineColor = lastVal >= 0 ? '#40b080' : '#d04848';
+  ctx.beginPath();
+  ctx.moveTo(toX(0), toY(vals[0]));
+  vals.forEach((v, i) => { if (i > 0) ctx.lineTo(toX(i), toY(v)); });
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  const lastX = toX(vals.length - 1);
+  const lastY = toY(lastVal);
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+  ctx.fillStyle = lineColor;
+  ctx.fill();
+}
+
+// ==========================================
+// CERTIFICATES PAGE
+// ==========================================
+async function loadCertificate() {
+  const root = document.getElementById('certificates-root');
+  if (!root) return;
+  if (!currentUser || !sb) {
+    root.innerHTML = '<div class="empty-state"><h3>Sign in to view certificates</h3><p>Log in to see which PolyEdge achievements you have unlocked.</p><button class="btn btn-primary" data-page="login">Sign In</button></div>';
+    bindDataPage();
+    return;
+  }
+
+  const fullName = [
+    currentProfile?.first_name || '',
+    currentProfile?.last_name || ''
+  ].join(' ').trim() || currentProfile?.display_name || currentUser.email.split('@')[0] || 'Trader';
+
+  let evals = [];
+  let trades = [];
+  try {
+    const { data: e } = await sb.from('evaluations')
+      .select('*')
+      .eq('user_id', currentUser.id);
+    evals = e || [];
+    const { data: t } = await sb.from('trades')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('status', 'closed');
+    trades = t || [];
+  } catch (err) {
+    console.warn('loadCertificate data error:', err);
+  }
+
+  const hasPassedEval = evals.some(e => e.status === 'passed');
+  const hasFunded = evals.some(e => e.status === 'funded');
+  const hasFirstTrade = trades.length > 0;
+  const wins = trades.filter(t => t.pnl > 0);
+  const wr = trades.length ? (wins.length / trades.length * 100) : 0;
+  const hasConsistency = trades.length >= 10 && wr > 60;
+
+  const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const certs = [
+    {
+      id: 'passed',
+      title: 'Passed Evaluation',
+      subtitle: 'Evaluation Achievement',
+      unlocked: hasPassedEval,
+      requirement: 'Pass at least one PolyEdge evaluation',
+    },
+    {
+      id: 'funded',
+      title: 'Funded Trader',
+      subtitle: 'Funded Status',
+      unlocked: hasFunded,
+      requirement: 'Reach funded status on any account',
+    },
+    {
+      id: 'first-trade',
+      title: 'First Trade',
+      subtitle: 'Milestone',
+      unlocked: hasFirstTrade,
+      requirement: 'Complete your first closed trade',
+    },
+    {
+      id: 'consistency',
+      title: 'Consistency Award',
+      subtitle: 'Performance',
+      unlocked: hasConsistency,
+      requirement: 'Close 10+ trades with win rate above 60%',
+    },
+  ];
+
+  root.innerHTML = `
+    <h2 style="margin-bottom:24px">Certificates</h2>
+    <p style="color:var(--text3);max-width:520px;margin:0 auto 32px">Premium PolyEdge certificates celebrating your progression as a trader. Unlock them by completing evaluations and trading consistently.</p>
+    <div class="cert-grid">
+      ${certs.map(c => `
+        <div class="cert-type-card ${c.unlocked ? 'unlocked' : 'locked'}" ${c.unlocked ? '' : `title="${c.requirement}"`}>
+          <div class="cert-type-header">
+            <div class="cert-type-title">${c.title}</div>
+            ${c.unlocked ? '<span class="badge badge-ok">Unlocked</span>' : '<span class="cert-lock">🔒</span>'}
+          </div>
+          <div class="cert-type-sub">${c.subtitle}</div>
+          <div class="cert-type-body">
+            <div class="cert-card">
+              <div class="cert-glow"></div>
+              <div class="cert-inner">
+                <div class="cert-logo">PolyEdge</div>
+                <div class="cert-divider"></div>
+                <div class="cert-title">${c.title.toUpperCase()}</div>
+                <div class="cert-subtitle">${c.subtitle.toUpperCase()}</div>
+                <div class="cert-phase">CERTIFICATE</div>
+                <div class="cert-date">DATE: <span>${today}</span></div>
+                <div class="cert-presented">PROUDLY PRESENTED TO:</div>
+                <div class="cert-name">${fullName.toUpperCase()}</div>
+                <div class="cert-footer">
+                  <div class="cert-signature">
+                    <div class="cert-sign-line"></div>
+                    <div class="cert-sign-label">PolyEdge</div>
+                  </div>
+                  <div class="cert-qr">
+                    <div class="cert-qr-placeholder">
+                      <svg width="64" height="64" viewBox="0 0 64 64"><rect x="0" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="0" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="0" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="0" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="16" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="32" y="24" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="0" y="44" width="20" height="20" fill="rgba(255,255,255,0.3)"/><rect x="24" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="44" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="44" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/><rect x="56" y="56" width="8" height="8" fill="rgba(255,255,255,0.3)"/></svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cert-type-footer">
+            ${c.unlocked ? '<span>Ready to download soon</span>' : `<span class="cert-locked-copy">Locked — ${c.requirement}</span>`}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  bindDataPage();
 }
 
 // ==========================================
@@ -734,9 +1143,11 @@ function showPage(id) {
   if (id === 'dashboard') loadDashboard();
   if (id === 'leaderboard') loadLeaderboard();
   if (id === 'admin' && currentProfile?.is_admin) loadAdmin();
-  if (id === 'analytics') loadAnalytics();
+  if (id === 'polymarket') loadAnalytics();
   if (id === 'accounts') loadAccounts();
   if (id === 'certificate') loadCertificate();
+  if (id === 'stats') loadPolyEdgeStats();
+  if (id === 'settings') loadSettings();
 
   // Homepage animations
   if (id === 'home') {

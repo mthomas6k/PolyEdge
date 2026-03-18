@@ -278,7 +278,7 @@ function renderAnalyticsDashboard(s, wallet) {
           <span class="an-wallet-addr">${shortWallet}</span>
           <button class="an-change-wallet" onclick="loadAnalytics(true)">change</button>
         </div>
-        <h1 class="an-title">Portfolio Analytics</h1>
+        <h1 class="an-title">Polymarket Analytics</h1>
       </div>
       <button class="an-refresh-btn" onclick="fetchAndRenderAnalytics('${wallet}')">
         <span class="an-refresh-icon">↻</span> Refresh
@@ -412,7 +412,7 @@ function renderAnalyticsDashboard(s, wallet) {
       ` : '<div class="an-empty-state" style="padding:40px">No open positions found</div>'}
     </div>
 
-    <!-- P&L Calendar — uses CLOSED bets from Supabase evaluations -->
+    <!-- P&L Calendar — uses CLOSED trades from PolyEdge evaluations -->
     <div id="analytics-calendar"></div>
   `;
 
