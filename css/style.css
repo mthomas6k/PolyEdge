@@ -7,7 +7,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
 
 /* ========== HERO TERMINAL BACKGROUND ========== */
-#terminal-bg-container{background:transparent}
+#terminal-bg-container{background:transparent;text-align:left}
 #terminal-bg-container #term{
   position:absolute;inset:0;
   padding:8px 18px 14px 18px;
@@ -18,7 +18,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
   text-align:left;
   align-items:flex-start;
 }
-#terminal-bg-container #linesContainer{width:100%}
+#terminal-bg-container #linesContainer{width:100%;text-align:left}
 #terminal-bg-container .line{display:block;white-space:pre-wrap;word-break:break-word;min-height:17px;}
 #terminal-bg-container .dim{color:#2a4a7a;opacity:0.55;}
 #terminal-bg-container .mid{color:#3a6aaa;opacity:0.75;}
@@ -35,6 +35,8 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
   color:#6a9fd8;
   font-family:'Menlo','Monaco','Courier New',monospace;
   font-size:11px;
+  text-align:left;
+  width:100%;
 }
 @media(max-width:768px){
   #terminal-bg-container #term{font-size:9px}
