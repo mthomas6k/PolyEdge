@@ -15,7 +15,10 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
   font-size:11px;line-height:1.5;
   overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;height:100%;width:100%;
   opacity:0.85;
+  text-align:left;
+  align-items:flex-start;
 }
+#terminal-bg-container #linesContainer{width:100%}
 #terminal-bg-container .line{display:block;white-space:pre-wrap;word-break:break-word;min-height:17px;}
 #terminal-bg-container .dim{color:#2a4a7a;opacity:0.55;}
 #terminal-bg-container .mid{color:#3a6aaa;opacity:0.75;}
