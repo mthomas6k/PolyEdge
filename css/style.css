@@ -7,19 +7,65 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
 
 /* ========== HERO TERMINAL BACKGROUND ========== */
-#terminal-bg-container{background:transparent;text-align:left}
+#terminal-bg-container{
+  background:transparent;
+  text-align:left;
+}
+
+#terminal-bg-container #glow{
+  position:absolute;
+  width:600px;height:600px;
+  border-radius:50%;
+  background:radial-gradient(circle,
+    rgba(60,120,255,0.07) 0%,
+    rgba(40,90,220,0.04) 35%,
+    rgba(30,70,180,0.02) 60%,
+    transparent 80%
+  );
+  pointer-events:none;
+  left:18px;bottom:40px;
+  transform:translate(0,50%);
+  z-index:0;
+}
+
 #terminal-bg-container #term{
   position:absolute;inset:0;
   padding:8px 18px 14px 18px;
   font-family:'Menlo','Monaco','Courier New',monospace;
-  font-size:11px;line-height:1.5;
-  overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;height:100%;width:100%;
-  opacity:0.85;
+  font-size:11px;line-height:1.6;
+  overflow:hidden;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  height:100%;width:100%;
+  z-index:1;
   text-align:left;
   align-items:flex-start;
+  opacity:0.9;
 }
-#terminal-bg-container #linesContainer{width:100%;text-align:left}
-#terminal-bg-container .line{display:block;white-space:pre-wrap;word-break:break-word;min-height:17px;}
+
+#terminal-bg-container #linesContainer{
+  width:100%;
+  text-align:left;
+}
+
+#terminal-bg-container .line{
+  display:block;
+  white-space:pre-wrap;
+  word-break:break-all;
+  min-height:17px;
+  margin-bottom:1px;
+}
+
+#terminal-bg-container .line.just-committed{
+  animation: residualGlow 2.2s ease-out forwards;
+}
+
+@keyframes residualGlow {
+  0%   { text-shadow: 0 0 8px rgba(140,200,255,0.6), 0 0 18px rgba(90,160,255,0.3); filter: brightness(1.45); }
+  25%  { text-shadow: 0 0 5px rgba(110,170,255,0.35), 0 0 12px rgba(70,130,255,0.15); filter: brightness(1.18); }
+  70%  { text-shadow: 0 0 2px rgba(80,140,255,0.12); filter: brightness(1.04); }
+  100% { text-shadow: none; filter: brightness(1); }
+}
+
 #terminal-bg-container .dim{color:#2a4a7a;opacity:0.55;}
 #terminal-bg-container .mid{color:#3a6aaa;opacity:0.75;}
 #terminal-bg-container .bright{color:#6a9fd8;opacity:0.9;}
@@ -27,17 +73,41 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
 #terminal-bg-container .grey{color:#5a7a9a;opacity:0.6;}
 #terminal-bg-container .err{color:#7a3a4a;opacity:0.75;}
 #terminal-bg-container .ok{color:#3a7a5a;opacity:0.78;}
-#terminal-bg-container .comment{color:#2a4a6a;opacity:0.58;font-style:italic;}
-#terminal-bg-container .slow{color:#7aaad8;opacity:0.88;}
+#terminal-bg-container .comment{color:#5a8ec8;opacity:1;text-shadow:0 0 8px rgba(80,140,220,0.5),0 0 18px rgba(60,120,200,0.25);}
+#terminal-bg-container .slow{color:#7aaad8;opacity:1;text-shadow:0 0 8px rgba(100,160,230,0.5),0 0 18px rgba(70,130,210,0.25);}
+
 #terminal-bg-container #activeLine{
-  display:block;min-height:17px;
-  white-space:pre-wrap;word-break:break-word;
-  color:#6a9fd8;
+  display:block;
+  min-height:19px;
+  white-space:pre-wrap;
+  word-break:break-all;
   font-family:'Menlo','Monaco','Courier New',monospace;
   font-size:11px;
+  position:relative;z-index:2;
   text-align:left;
   width:100%;
 }
+
+#terminal-bg-container .cur{
+  display:inline-block;
+  width:7px;height:14px;
+  margin-left:2px;
+  vertical-align:middle;
+  border-radius:1px;
+  background:#e0e8f0;
+  box-shadow:
+    0 0 3px 1px rgba(200,220,240,0.9),
+    0 0 8px 4px rgba(160,190,220,0.6),
+    0 0 18px 8px rgba(120,160,200,0.35),
+    0 0 35px 14px rgba(100,140,180,0.15);
+  opacity:1;
+}
+
+#terminal-bg-container .spacer{
+  display:block;
+  height:10px;
+}
+
 @media(max-width:768px){
   #terminal-bg-container #term{font-size:9px}
   #terminal-bg-container #activeLine{font-size:9px}

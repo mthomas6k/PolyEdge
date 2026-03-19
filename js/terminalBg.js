@@ -1,7 +1,7 @@
 // Terminal hero background renderer (homepage only)
 (function () {
   const CUR_HTML =
-    '<span id="cur" style="display:inline-block;width:6px;height:13px;background:#4a8ac8;margin-left:1px;vertical-align:middle;opacity:0.9;"></span>';
+    '<span class="cur" id="cur" aria-hidden="true"></span>';
 
   function sl(ms) {
     return new Promise((r) => setTimeout(r, ms));
@@ -50,6 +50,7 @@
 
     // Build terminal DOM inside hero container (not body)
     host.innerHTML = `
+      <div id="glow"></div>
       <div id="term">
         <div id="linesContainer"></div>
         <div id="activeLine"></div>
@@ -82,6 +83,7 @@
 
     function renderActive(text, cls) {
       activeLine.className = cls || "mid";
+      activeLine.style.textAlign = "left";
       const parts = wrapLineMobile(text, 45);
       const safe = parts.map(escapeHtml).join("\n");
       activeLine.innerHTML = safe + CUR_HTML;
