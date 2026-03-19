@@ -6,6 +6,38 @@ html{font-size:16px;scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
 
+/* ========== HERO TERMINAL BACKGROUND ========== */
+#terminal-bg-container{background:transparent}
+#terminal-bg-container #term{
+  position:absolute;inset:0;
+  padding:8px 18px 14px 18px;
+  font-family:'Menlo','Monaco','Courier New',monospace;
+  font-size:11px;line-height:1.5;
+  overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;height:100%;width:100%;
+  opacity:0.85;
+}
+#terminal-bg-container .line{display:block;white-space:pre-wrap;word-break:break-word;min-height:17px;}
+#terminal-bg-container .dim{color:#2a4a7a;opacity:0.55;}
+#terminal-bg-container .mid{color:#3a6aaa;opacity:0.75;}
+#terminal-bg-container .bright{color:#6a9fd8;opacity:0.9;}
+#terminal-bg-container .white{color:#a8bcd4;opacity:0.82;}
+#terminal-bg-container .grey{color:#5a7a9a;opacity:0.6;}
+#terminal-bg-container .err{color:#7a3a4a;opacity:0.75;}
+#terminal-bg-container .ok{color:#3a7a5a;opacity:0.78;}
+#terminal-bg-container .comment{color:#2a4a6a;opacity:0.58;font-style:italic;}
+#terminal-bg-container .slow{color:#7aaad8;opacity:0.88;}
+#terminal-bg-container #activeLine{
+  display:block;min-height:17px;
+  white-space:pre-wrap;word-break:break-word;
+  color:#6a9fd8;
+  font-family:'Menlo','Monaco','Courier New',monospace;
+  font-size:11px;
+}
+@media(max-width:768px){
+  #terminal-bg-container #term{font-size:9px}
+  #terminal-bg-container #activeLine{font-size:9px}
+}
+
 @keyframes pulseGlow{0%,100%{box-shadow:0 0 4px 1px rgba(56,136,232,0.3)}50%{box-shadow:0 0 12px 3px rgba(56,136,232,0.5)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}

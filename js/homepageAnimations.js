@@ -14,18 +14,22 @@ const HomepageAnimations = (() => {
     const hero = document.querySelector('#page-home .hero');
     if (!hero) return;
 
-    // Create canvas for particle effects
-    canvas = document.createElement('canvas');
-    canvas.id = 'hero-canvas';
-    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.6';
-    hero.style.position = 'relative';
-    hero.insertBefore(canvas, hero.firstChild);
+    // If terminal background exists, skip particle canvas (keep counters + section observers)
+    const terminalHost = document.getElementById('terminal-bg-container');
+    if (!terminalHost) {
+      // Create canvas for particle effects
+      canvas = document.createElement('canvas');
+      canvas.id = 'hero-canvas';
+      canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.6';
+      hero.style.position = 'relative';
+      hero.insertBefore(canvas, hero.firstChild);
 
-    resize();
-    window.addEventListener('resize', resize);
-    createParticles();
-    isActive = true;
-    animate();
+      resize();
+      window.addEventListener('resize', resize);
+      createParticles();
+      isActive = true;
+      animate();
+    }
 
     // Animate stats counters
     animateCounters();
