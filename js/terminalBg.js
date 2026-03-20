@@ -118,9 +118,9 @@
 
       const base = classRGB[cls] || classRGB.mid;
 
-      // Wider, smoother spread.
-      const k = 0.018;
-      const power = 1.2;
+      // Wider, smoother falloff (bigger “glow circle” than tight k=0.018).
+      const k = 0.0065;
+      const power = 1.1;
 
       let html = "";
       let offset = 0;
@@ -129,7 +129,9 @@
         const len = part.length;
         for (let i = 0; i < len; i++) {
           const dist = totalLen - (offset + i); // dist=1 is nearest to cursor
-          const t = 1 / (1 + Math.pow(dist, power) * k);
+          let t = 1 / (1 + Math.pow(dist, power) * k);
+          // Lift mid-tones so distant chars aren’t “dead” / flat vs Claude.
+          t = Math.min(1, Math.pow(t, 0.82) * 1.08 + 0.04);
 
           const [r, g, b] = lerpColor(
             base[0], base[1], base[2],
@@ -137,16 +139,18 @@
             t
           );
 
-          // text-shadow where t is meaningful
+          // Softer, wider bloom (more layers + larger radii).
           let shadow = "";
-          if (t > 0.05) {
-            const s1 = (t * 1.1).toFixed(2);
-            const s2 = (t * 0.65).toFixed(2);
-            const s3 = (t * 0.35).toFixed(2);
+          if (t > 0.03) {
+            const s1 = (t * 1.25).toFixed(2);
+            const s2 = (t * 0.85).toFixed(2);
+            const s3 = (t * 0.5).toFixed(2);
+            const s4 = (t * 0.22).toFixed(2);
             shadow =
-              `text-shadow:0 0 3px rgba(180,220,255,${s1}),` +
-              `0 0 8px rgba(120,180,255,${s2}),` +
-              `0 0 16px rgba(80,140,255,${s3});`;
+              `text-shadow:0 0 2px rgba(200,235,255,${s1}),` +
+              `0 0 10px rgba(140,200,255,${s2}),` +
+              `0 0 22px rgba(90,170,255,${s3}),` +
+              `0 0 42px rgba(60,140,240,${s4});`;
           }
 
           const ch = escapeHtml(part[i]);
