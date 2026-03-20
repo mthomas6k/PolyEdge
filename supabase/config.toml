@@ -1,0 +1,3 @@
+# Gamma proxy: allow anonymous browser calls (public Polymarket data only).
+[functions.gamma-proxy]
+verify_jwt = false

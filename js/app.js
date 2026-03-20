@@ -167,6 +167,294 @@ function showMsg(el, text, type) {
 }
 
 // ==========================================
+// POLYMARKET EXPLORE UI (FundingPredictions-style)
+// ==========================================
+var PM_STATE = {
+  raw: [],
+  cat: 'all',
+  sort: 'volume',
+  hideSports: false,
+  hideCrypto: false,
+  query: '',
+};
+
+function marketsChromeHTML() {
+  return `
+    <div class="poly-markets-wrap">
+      <div class="pm-toolbar">
+        <div class="pm-toolbar-left">
+          <span class="pm-kicker">Polymarket</span>
+          <h3 class="pm-heading">Live markets</h3>
+        </div>
+        <div class="dash-markets-search pm-search">
+          <input id="market-search-input" type="search" placeholder="Search markets…" autocomplete="off" oninput="handleMarketSearch(event)">
+          <button type="button" class="form-btn pm-refresh" onclick="refreshMarkets()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="pm-cat-row" id="pm-cat-pills"></div>
+      <div class="pm-filter-row">
+        <label class="pm-filter-label">Sort
+          <select id="pm-sort" class="pm-select" onchange="polyMarketOnSort(this.value)">
+            <option value="volume">Volume</option>
+            <option value="liquidity">Liquidity</option>
+            <option value="change">Yes price</option>
+          </select>
+        </label>
+        <label class="pm-check"><input type="checkbox" id="pm-hide-sports" onchange="polyMarketOnToggleSports(this.checked)"> Hide sports</label>
+        <label class="pm-check"><input type="checkbox" id="pm-hide-crypto" onchange="polyMarketOnToggleCrypto(this.checked)"> Hide crypto</label>
+      </div>
+      <div class="pm-layout">
+        <div class="pm-main-col">
+          <div id="pm-featured" class="pm-featured" style="display:none"></div>
+          <div id="markets-grid" class="pm-market-grid"></div>
+        </div>
+        <aside class="pm-trending" id="pm-trending-sidebar" aria-label="Trending markets">
+          <div class="pm-trend-head">Trending</div>
+          <div id="pm-trending-list" class="pm-trend-list"></div>
+        </aside>
+      </div>
+    </div>`;
+}
+
+function pmFmtVol(v) {
+  const n = parseFloat(v) || 0;
+  if (n > 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+  if (n > 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+  return '$' + n.toFixed(0);
+}
+
+function pmFmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch (e) {
+    return '—';
+  }
+}
+
+function getFilteredMarkets() {
+  let list = PM_STATE.raw.slice();
+  const q = PM_STATE.query.trim().toLowerCase();
+  if (q.length > 1) {
+    list = list.filter(m => {
+      const t = (m.question || m.title || '').toLowerCase();
+      const slug = (m.slug || '').toLowerCase();
+      return t.includes(q) || slug.includes(q.replace(/\s+/g, '-'));
+    });
+  }
+  if (PM_STATE.cat !== 'all') {
+    list = list.filter(m => PolymarketService.marketBucket(m) === PM_STATE.cat);
+  }
+  if (PM_STATE.hideSports) {
+    list = list.filter(m => PolymarketService.marketBucket(m) !== 'Sports');
+  }
+  if (PM_STATE.hideCrypto) {
+    list = list.filter(m => PolymarketService.marketBucket(m) !== 'Crypto');
+  }
+  list.sort((a, b) => {
+    const pa = PolymarketService.parseMarket(a);
+    const pb = PolymarketService.parseMarket(b);
+    if (PM_STATE.sort === 'liquidity') return pb.liquidity - pa.liquidity;
+    if (PM_STATE.sort === 'change') return pb.yesPrice - pa.yesPrice;
+    return pb.volume - pa.volume;
+  });
+  return list;
+}
+
+function buildCategoryPills(rawList) {
+  const counts = {};
+  (rawList || []).forEach(m => {
+    const b = PolymarketService.marketBucket(m);
+    counts[b] = (counts[b] || 0) + 1;
+  });
+  const order = ['Politics', 'Crypto', 'Sports', 'Tech', 'Culture', 'Economy', 'Other'];
+  let html = `<button type="button" class="pm-pill${PM_STATE.cat === 'all' ? ' active' : ''}" onclick="polyMarketSetCat('all')">All <span class="pm-pill-n">${rawList.length}</span></button>`;
+  order.forEach(cat => {
+    const n = counts[cat] || 0;
+    if (n === 0) return;
+    html += `<button type="button" class="pm-pill${PM_STATE.cat === cat ? ' active' : ''}" onclick="polyMarketSetCat('${cat}')">${cat} <span class="pm-pill-n">${n}</span></button>`;
+  });
+  return html;
+}
+
+function renderPmCard(m, canBet, idx) {
+  const pm = PolymarketService.parseMarket(m);
+  const yesP = Math.round(pm.yesPrice * 100);
+  const noP = Math.round(pm.noPrice * 100);
+  const pct = yesP;
+  const slug = pm.slug || '';
+  const polyUrl = slug ? `https://polymarket.com/event/${encodeURIComponent(slug)}` : 'https://polymarket.com';
+  const img = pm.image
+    ? `<img class="pm-card-img" src="${String(pm.image).replace(/"/g, '&quot;')}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : `<div class="pm-card-img pm-card-img-ph">◆</div>`;
+  const dis = canBet ? '' : ' disabled';
+  const onY = canBet ? `onclick="openMarketBetByIdx(${idx},'YES')"` : '';
+  const onN = canBet ? `onclick="openMarketBetByIdx(${idx},'NO')"` : '';
+  return `
+    <article class="pm-card">
+      <div class="pm-card-top">
+        ${img}
+        <div class="pm-card-headtext">
+          <div class="pm-card-title-row">
+            <h4 class="pm-card-title">${truncateStr(pm.question, 72)}</h4>
+            <span class="pm-live-badge">⚡ Live</span>
+          </div>
+          <div class="pm-bucket">${PolymarketService.marketBucket(m)}</div>
+        </div>
+      </div>
+      <div class="pm-card-chance"><span class="pm-pct">${pct}%</span> <span class="pm-chance-label">chance</span></div>
+      <div class="pm-progress"><div class="pm-progress-fill" style="width:${Math.min(100, pct)}%"></div></div>
+      <div class="pm-card-btns">
+        <button type="button" class="pm-btn-yes market-price-btn market-price-yes${dis}" ${onY}>Yes ${yesP}¢</button>
+        <button type="button" class="pm-btn-no market-price-btn market-price-no${dis}" ${onN}>No ${noP}¢</button>
+      </div>
+      <div class="pm-card-foot">
+        <span class="pm-vol">${pmFmtVol(pm.volume)} vol</span>
+        <a class="pm-poly-link" href="${polyUrl}" target="_blank" rel="noopener">View →</a>
+        <span class="pm-exp">${pmFmtDate(pm.endDate)}</span>
+      </div>
+    </article>`;
+}
+
+function renderFeaturedCard(m, canBet, idx) {
+  const pm = PolymarketService.parseMarket(m);
+  const yesP = Math.round(pm.yesPrice * 100);
+  const noP = Math.round(pm.noPrice * 100);
+  const slug = pm.slug || '';
+  const polyUrl = slug ? `https://polymarket.com/event/${encodeURIComponent(slug)}` : 'https://polymarket.com';
+  const dis = canBet ? '' : ' disabled';
+  const onY = canBet ? `onclick="openMarketBetByIdx(${idx},'YES')"` : '';
+  const onN = canBet ? `onclick="openMarketBetByIdx(${idx},'NO')"` : '';
+  return `
+    <div class="pm-featured-inner">
+      <div class="pm-featured-copy">
+        <span class="pm-live-badge">Featured</span>
+        <h3 class="pm-featured-title">${truncateStr(pm.question, 120)}</h3>
+        <div class="pm-card-chance pm-featured-chance"><span class="pm-pct">${yesP}%</span> <span class="pm-chance-label">chance</span></div>
+        <div class="pm-progress pm-featured-bar"><div class="pm-progress-fill" style="width:${Math.min(100, yesP)}%"></div></div>
+        <div class="pm-featured-btns">
+          <button type="button" class="pm-btn-yes market-price-btn market-price-yes${dis}" ${onY}>Yes ${yesP}¢</button>
+          <button type="button" class="pm-btn-no market-price-btn market-price-no${dis}" ${onN}>No ${noP}¢</button>
+        </div>
+        <div class="pm-featured-meta">
+          <span>${pmFmtVol(pm.volume)} volume</span>
+          <a class="pm-poly-link" href="${polyUrl}" target="_blank" rel="noopener">View market →</a>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderTrendRow(m, idx, canBet) {
+  const pm = PolymarketService.parseMarket(m);
+  const p = Math.round(pm.yesPrice * 100);
+  const dis = canBet ? '' : ' disabled';
+  const click = canBet ? `onclick="openMarketBetByIdx(${idx},'YES')"` : '';
+  return `
+    <button type="button" class="pm-trend-row${dis}" ${click}>
+      <span class="pm-trend-pct">${p}%</span>
+      <span class="pm-trend-q">${truncateStr(pm.question, 48)}</span>
+      <span class="pm-trend-v">${pmFmtVol(pm.volume)}</span>
+    </button>`;
+}
+
+function polyMarketRedraw() {
+  const grid = document.getElementById('markets-grid');
+  const feat = document.getElementById('pm-featured');
+  const trend = document.getElementById('pm-trending-list');
+  if (!grid) return;
+
+  const filtered = getFilteredMarkets();
+  const canBet = !!activeEval;
+  const searching = PM_STATE.query.trim().length > 1;
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="market-loading">No markets match filters. Try another category or search.</div>';
+    if (feat) {
+      feat.style.display = 'none';
+      feat.innerHTML = '';
+    }
+    if (trend) trend.innerHTML = '';
+    return;
+  }
+
+  window.__PM_LAST_LIST = filtered;
+
+  if (!searching && feat) {
+    feat.style.display = 'block';
+    feat.innerHTML = renderFeaturedCard(filtered[0], canBet, 0);
+  } else if (feat) {
+    feat.style.display = 'none';
+    feat.innerHTML = '';
+  }
+
+  if (trend) {
+    const n = searching ? 12 : 8;
+    trend.innerHTML = filtered.slice(0, n).map((m, i) => renderTrendRow(m, i, canBet)).join('');
+  }
+
+  const startIdx = !searching && feat && filtered.length > 1 ? 1 : 0;
+  const gridSlice = filtered.slice(startIdx);
+  if (gridSlice.length === 0) {
+    grid.innerHTML = '<div class="market-loading" style="padding:12px 0">Only one market in this view — see featured above.</div>';
+  } else {
+    grid.innerHTML = gridSlice.map((m, i) => renderPmCard(m, canBet, startIdx + i)).join('');
+  }
+}
+
+function polyMarketSetCat(cat) {
+  PM_STATE.cat = cat || 'all';
+  const pills = document.getElementById('pm-cat-pills');
+  if (pills && PM_STATE.raw.length) pills.innerHTML = buildCategoryPills(PM_STATE.raw);
+  polyMarketRedraw();
+}
+
+function polyMarketOnSort(v) {
+  PM_STATE.sort = v || 'volume';
+  polyMarketRedraw();
+}
+
+function polyMarketOnToggleSports(on) {
+  PM_STATE.hideSports = !!on;
+  polyMarketRedraw();
+}
+
+function polyMarketOnToggleCrypto(on) {
+  PM_STATE.hideCrypto = !!on;
+  polyMarketRedraw();
+}
+
+function openMarketBetByIdx(idx, side) {
+  const m = window.__PM_LAST_LIST && window.__PM_LAST_LIST[idx];
+  if (!m) return;
+  const pm = PolymarketService.parseMarket(m);
+  const px = side === 'YES' ? pm.yesPrice : pm.noPrice;
+  openMarketBet(pm.question, side, px);
+}
+
+function updateNavTicker(markets) {
+  const el = document.getElementById('nav-market-ticker');
+  if (!el) return;
+  if (!markets || !markets.length) {
+    el.classList.remove('on');
+    el.innerHTML = '';
+    document.body.classList.remove('has-nav-ticker');
+    return;
+  }
+  const slice = markets.slice(0, 28);
+  const parts = slice.map(m => {
+    const pm = PolymarketService.parseMarket(m);
+    const p = Math.round(pm.yesPrice * 100);
+    const q = truncateStr(pm.question, 36).replace(/</g, '');
+    return `<span class="nav-tick-item"><strong>${p}%</strong> ${q}</span>`;
+  });
+  const track = parts.join('<span class="nav-tick-dot">·</span>');
+  el.innerHTML = `<div class="nav-ticker-inner" aria-hidden="true"><div class="nav-ticker-track">${track}<span class="nav-tick-dot">·</span>${track}</div></div>`;
+  el.classList.add('on');
+  document.body.classList.add('has-nav-ticker');
+}
+
+// ==========================================
 // DASHBOARD — Now with Polymarket Live Markets
 // ==========================================
 async function loadDashboard() {
@@ -201,17 +489,8 @@ async function loadDashboard() {
           </div>
           <div class="dash-main">
             <div class="dash-markets-section">
-              <div class="dash-markets-header">
-                <div class="dp-title">Live Polymarket Markets</div>
-                <div class="dash-markets-search">
-                  <input id="market-search-input" placeholder="Search markets..." onkeyup="handleMarketSearch(event)">
-                  <button class="form-btn" style="width:auto;padding:8px 16px;font-size:10px" onclick="refreshMarkets()">↻ Refresh</button>
-                </div>
-              </div>
-              <div id="markets-grid" class="market-grid">
-                <div class="market-loading"><div class="an-spinner" style="margin:0 auto 12px;width:24px;height:24px"></div>Loading markets...</div>
-              </div>
-              <div class="dc-sub" style="margin-top:10px">To place a bet, start a challenge and come back to Dashboard.</div>
+              ${marketsChromeHTML()}
+              <div class="dc-sub" style="margin-top:14px">To place a bet, start a challenge and come back to Markets.</div>
             </div>
           </div>
         </div>
@@ -282,16 +561,7 @@ async function loadDashboard() {
           ${closedTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Exit</th><th>P&L</th></tr></thead><tbody>${closedTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${(t.exit_price*100).toFixed(1)}¢</td><td class="${t.pnl>=0?'pgrn':'pred'}">${t.pnl>=0?'+':''}${fmt(t.pnl)}</td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-family:var(--mono);font-size:12px">No closed trades yet</p>'}
         </div>
         <div class="dash-markets-section">
-          <div class="dash-markets-header">
-            <div class="dp-title">Live Polymarket Markets</div>
-            <div class="dash-markets-search">
-              <input id="market-search-input" placeholder="Search markets..." onkeyup="handleMarketSearch(event)">
-              <button class="form-btn" style="width:auto;padding:8px 16px;font-size:10px" onclick="refreshMarkets()">↻ Refresh</button>
-            </div>
-          </div>
-          <div id="markets-grid" class="market-grid">
-            <div class="market-loading"><div class="an-spinner" style="margin:0 auto 12px;width:24px;height:24px"></div>Loading markets...</div>
-          </div>
+          ${marketsChromeHTML()}
         </div>
       </div>
     </div>`;
@@ -308,53 +578,50 @@ async function loadLiveMarkets(query) {
   const grid = document.getElementById('markets-grid');
   if (!grid) return;
 
+  const q = (query || '').trim();
+  PM_STATE.query = q;
+
+  const sortEl = document.getElementById('pm-sort');
+  if (sortEl) PM_STATE.sort = sortEl.value || 'volume';
+  const hs = document.getElementById('pm-hide-sports');
+  if (hs) PM_STATE.hideSports = hs.checked;
+  const hc = document.getElementById('pm-hide-crypto');
+  if (hc) PM_STATE.hideCrypto = hc.checked;
+
+  grid.innerHTML = '<div class="market-loading"><div class="an-spinner" style="margin:0 auto 12px;width:24px;height:24px"></div>Loading markets…</div>';
+
   try {
     let markets;
-    if (query && query.length > 1) {
-      markets = await PolymarketService.searchMarkets(query);
+    if (q.length > 1) {
+      markets = await PolymarketService.searchMarkets(q);
     } else {
-      markets = await PolymarketService.getMarkets(96, 0);
+      markets = await PolymarketService.fetchAllMarkets(false);
     }
 
     if (!markets || markets.length === 0) {
-      grid.innerHTML = '<div class="market-loading">No markets found. API may be rate-limited — try again in a moment.</div>';
+      grid.innerHTML = '<div class="market-loading">No markets loaded. Deploy the <code style="color:var(--accent)">gamma-proxy</code> Supabase function (see <code>supabase/functions/gamma-proxy</code>) or retry — public CORS proxies often rate-limit.</div>';
+      const pills = document.getElementById('pm-cat-pills');
+      if (pills) pills.innerHTML = '';
+      updateNavTicker([]);
       return;
     }
 
-    const canBet = !!activeEval;
-    grid.innerHTML = markets.map(m => {
-      const pm = PolymarketService.parseMarket(m);
-      const yesP = (pm.yesPrice * 100).toFixed(0);
-      const noP = (pm.noPrice * 100).toFixed(0);
-      const vol = pm.volume > 1000000 ? '$' + (pm.volume / 1000000).toFixed(1) + 'M' :
-                  pm.volume > 1000 ? '$' + (pm.volume / 1000).toFixed(0) + 'K' :
-                  '$' + pm.volume.toFixed(0);
-      const liq = pm.liquidity > 1000 ? '$' + (pm.liquidity / 1000).toFixed(0) + 'K' : '$' + pm.liquidity.toFixed(0);
-      const q = (pm.question || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-      return `
-        <div class="market-tile">
-          <div class="market-tile-q">${truncateStr(pm.question, 80)}</div>
-          <div class="market-tile-prices">
-            <div class="market-price-btn market-price-yes ${canBet ? '' : 'disabled'}" ${canBet ? `onclick="openMarketBet('${q}','YES',${pm.yesPrice})"` : 'title="Start a challenge to place bets"'}>${yesP}¢ Yes</div>
-            <div class="market-price-btn market-price-no ${canBet ? '' : 'disabled'}" ${canBet ? `onclick="openMarketBet('${q}','NO',${pm.noPrice})"` : 'title="Start a challenge to place bets"'}>${noP}¢ No</div>
-          </div>
-          <div class="market-tile-meta">
-            <span>Vol: ${vol}</span>
-            <span>Liq: ${liq}</span>
-          </div>
-        </div>`;
-    }).join('');
+    PM_STATE.raw = markets;
+    const pills = document.getElementById('pm-cat-pills');
+    if (pills) pills.innerHTML = buildCategoryPills(markets);
+    polyMarketRedraw();
+    updateNavTicker(markets);
   } catch (e) {
     console.error('Failed to load markets:', e);
-    grid.innerHTML = '<div class="market-loading">Failed to load markets. CORS proxies may be rate-limited.</div>';
+    grid.innerHTML = '<div class="market-loading">Failed to load markets. Check console. If you control Supabase, deploy <strong>gamma-proxy</strong> and refresh.</div>';
+    updateNavTicker([]);
   }
 }
 
 let marketSearchTimeout;
 function handleMarketSearch(e) {
   clearTimeout(marketSearchTimeout);
-  const q = e.target.value.trim();
+  const q = (e.target && e.target.value) ? e.target.value.trim() : '';
   marketSearchTimeout = setTimeout(() => loadLiveMarkets(q), 400);
 }
 
@@ -364,6 +631,25 @@ function refreshMarkets() {
   }
   const input = document.getElementById('market-search-input');
   loadLiveMarkets(input?.value?.trim() || '');
+}
+
+function profitCalc() {
+  const szEl = document.getElementById('pf-size');
+  const enEl = document.getElementById('pf-entry');
+  const yEl = document.getElementById('pf-out-yes');
+  const pEl = document.getElementById('pf-maxp');
+  if (!szEl || !enEl || !yEl || !pEl) return;
+  const sz = parseFloat(szEl.value) || 0;
+  const entry = (parseFloat(enEl.value) || 0) / 100;
+  if (entry <= 0 || entry >= 1 || sz <= 0) {
+    yEl.textContent = '—';
+    pEl.textContent = '—';
+    return;
+  }
+  const shares = sz / entry;
+  const payoutIfYes = shares;
+  yEl.textContent = payoutIfYes.toFixed(2);
+  pEl.textContent = (payoutIfYes - sz).toFixed(2);
 }
 
 function openMarketBet(marketName, side, price) {
@@ -1136,6 +1422,14 @@ window.startChallenge = startChallenge;
 // NAVIGATION
 // ==========================================
 function updateShellBackground(pageId) {
+  if (pageId === 'home') {
+    const t = document.getElementById('nav-market-ticker');
+    if (t) {
+      t.classList.remove('on');
+      t.innerHTML = '';
+    }
+    document.body.classList.remove('has-nav-ticker');
+  }
   if (window.MatrixRain) {
     if (pageId === 'home' || pageId === 'login') window.MatrixRain.disable();
     else window.MatrixRain.enable();
@@ -1171,6 +1465,7 @@ function showPage(id) {
   if (id === 'certificate') loadCertificate();
   if (id === 'dashboard') loadPolyEdgeStats();
   if (id === 'settings') loadSettings();
+  if (id === 'profit') profitCalc();
 
   // Homepage animations
   if (id === 'home') {

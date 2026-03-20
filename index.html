@@ -24,6 +24,7 @@
     </button>
     <div class="nav-links" id="nav-links">
       <a data-page="challenges">Challenges</a>
+      <a data-page="profit">Estimator</a>
       <a data-page="leaderboard">Leaderboard</a>
       <a data-page="wallet" class="auth-only">Wallet</a>
       <a data-page="dashboard" class="auth-only">Dashboard</a>
@@ -38,6 +39,7 @@
       <button class="nav-cta ghost" id="nav-logout-btn" style="display:none" onclick="logout()">Logout</button>
     </div>
   </nav>
+  <div id="nav-market-ticker" class="nav-ticker" role="presentation"></div>
 
   <!-- ========== HOME ========== -->
   <div id="page-home" class="page active">
@@ -448,6 +450,35 @@
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
+  <!-- ========== PROFIT ESTIMATOR ========== -->
+  <div id="page-profit" class="page">
+    <div class="section profit-wrap">
+      <div class="section-tag">Tools</div>
+      <h2>Position estimator</h2>
+      <p class="profit-lead">Binary contracts pay $1 each if they resolve in your favor. This is a quick payout sketch (excluding fees).</p>
+      <div class="profit-grid">
+        <div class="form-group">
+          <label class="form-label">Size ($ deployed)</label>
+          <input class="form-input" id="pf-size" type="number" min="1" step="1" value="100" oninput="profitCalc()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Avg entry (¢)</label>
+          <input class="form-input" id="pf-entry" type="number" min="1" max="99" step="1" value="45" oninput="profitCalc()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gross payout if Yes ($)</label>
+          <div id="pf-out-yes" class="profit-out">—</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Profit if Yes ($)</label>
+          <div id="pf-maxp" class="profit-out">—</div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="profitCalc()">Recalculate</button>
+    </div>
+    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+  </div>
+
   <!-- ========== LOGIN ========== -->
   <div id="page-login" class="page">
     <div class="login-page-bg" id="login-page-bg">
@@ -687,6 +718,7 @@
         <a data-page="certificate">Certificate</a>
         <a data-page="education">Prediction Markets</a>
         <a data-page="faq">FAQ</a>
+        <a data-page="profit">Profit estimator</a>
       </div>
       <div class="bottom-nav-group">
         <span class="bottom-nav-label">PolyEdge</span>
@@ -708,7 +740,7 @@
   <script src="js/loginNetwork.js"></script>
   <script src="js/homepageAnimations.js"></script>
   <script src="js/analytics.js?v=7"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/app.js?v=9"></script>
   <script src="js/terminalBg.js"></script>
 
 </body>

@@ -1,21 +1,21 @@
 // ==========================================
-// POLYMARKET SERVICE — Gamma API via CORS proxies
-// Fetches many pages of markets into one cache; search filters client-side.
+// POLYMARKET SERVICE — Gamma API
+// 1) Supabase Edge Function gamma-proxy (deploy: supabase functions deploy gamma-proxy --no-verify-jwt)
+// 2) Public CORS proxies as fallback
 // ==========================================
 
 const PolymarketService = (() => {
-  const PROXIES = [
-    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url) => `https://proxy.cors.sh/${url}`,
-  ];
-
   const GAMMA_API = 'https://gamma-api.polymarket.com';
   const PAGE_SIZE = 100;
   const MAX_MARKETS = 600;
 
-  let proxyIndex = 0;
+  const PROXIES = [
+    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  ];
 
+  let proxyIndex = 0;
   let fullCache = { list: [], ts: 0 };
   const CACHE_TTL_MS = 90000;
 
@@ -23,33 +23,75 @@ const PolymarketService = (() => {
     fullCache = { list: [], ts: 0 };
   }
 
-  async function fetchWithProxy(url, attempt = 0) {
+  function config() {
+    return typeof window !== 'undefined' && window.POLYEDGE_CONFIG
+      ? window.POLYEDGE_CONFIG
+      : {};
+  }
+
+  /**
+   * Fetch JSON from Gamma via Supabase function (same-origin to your project) or proxies.
+   * @param {string} path — e.g. markets?limit=10&offset=0
+   */
+  async function fetchGammaPath(path) {
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = config();
+    const base = (SUPABASE_URL || '').replace(/\/$/, '');
+    if (base) {
+      try {
+        const proxyUrl = `${base}/functions/v1/gamma-proxy?path=${encodeURIComponent(path)}`;
+        const headers = {};
+        if (SUPABASE_ANON_KEY) {
+          headers.apikey = SUPABASE_ANON_KEY;
+          headers.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+        }
+        const controller = new AbortController();
+        const t = setTimeout(() => controller.abort(), 20000);
+        const r = await fetch(proxyUrl, { headers, signal: controller.signal });
+        clearTimeout(t);
+        const text = await r.text();
+        if (r.ok && text && text.trim()) {
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) return data;
+        }
+      } catch (e) {
+        console.warn('gamma-proxy:', e.message);
+      }
+    }
+
+    const fullUrl = `${GAMMA_API}/${path}`;
+    return fetchViaPublicProxies(fullUrl);
+  }
+
+  async function fetchViaPublicProxies(fullUrl, attempt = 0) {
     if (attempt >= PROXIES.length) {
       throw new Error('All CORS proxies failed');
     }
     const proxy = PROXIES[(proxyIndex + attempt) % PROXIES.length];
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
-      const r = await fetch(proxy(url), {
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const r = await fetch(proxy(fullUrl), {
         headers: { 'x-requested-with': 'XMLHttpRequest' },
         signal: controller.signal,
       });
       clearTimeout(timeout);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const text = await r.text();
-      if (!text || text.trim() === '') return [];
+      if (!text || !text.trim()) throw new Error('Empty body');
       proxyIndex = (proxyIndex + attempt) % PROXIES.length;
-      return JSON.parse(text);
+      const data = JSON.parse(text);
+      if (Array.isArray(data)) return data;
+      if (data && typeof data.contents === 'string') {
+        const inner = JSON.parse(data.contents);
+        return Array.isArray(inner) ? inner : [];
+      }
+      throw new Error('Unexpected JSON shape');
     } catch (e) {
-      console.warn(`Proxy ${attempt} failed for ${url}:`, e.message);
-      return fetchWithProxy(url, attempt + 1);
+      console.warn(`Proxy ${attempt} failed:`, e.message);
+      return fetchViaPublicProxies(fullUrl, attempt + 1);
     }
   }
 
-  /**
-   * Pull multiple pages from Gamma until empty or MAX_MARKETS.
-   */
   async function fetchAllMarkets(force = false) {
     const now = Date.now();
     if (
@@ -64,10 +106,10 @@ const PolymarketService = (() => {
     let offset = 0;
 
     while (offset < MAX_MARKETS) {
-      const url = `${GAMMA_API}/markets?limit=${PAGE_SIZE}&offset=${offset}&active=true&closed=false&order=volume&ascending=false`;
+      const path = `markets?limit=${PAGE_SIZE}&offset=${offset}&active=true&closed=false&order=volume&ascending=false`;
       let batch;
       try {
-        batch = await fetchWithProxy(url);
+        batch = await fetchGammaPath(path);
       } catch (e) {
         console.warn('fetchAllMarkets batch failed:', e);
         break;
@@ -102,9 +144,8 @@ const PolymarketService = (() => {
 
   async function getEvents(limit = 20) {
     try {
-      const data = await fetchWithProxy(
-        `${GAMMA_API}/events?limit=${limit}&active=true&closed=false&order=volume&ascending=false`
-      );
+      const path = `events?limit=${limit}&active=true&closed=false&order=volume&ascending=false`;
+      const data = await fetchGammaPath(path);
       return Array.isArray(data) ? data : [];
     } catch (e) {
       console.warn('getEvents failed:', e);
@@ -147,14 +188,28 @@ const PolymarketService = (() => {
       yesPrice: parseFloat(outcomePrices[0] || 0.5),
       noPrice: parseFloat(outcomePrices[1] || 0.5),
       outcomes: outcomes,
-      volume: parseFloat(m.volume || m.volumeNum || 0),
-      liquidity: parseFloat(m.liquidity || m.liquidityNum || 0),
+      volume: parseFloat(String(m.volume || m.volumeNum || 0).replace(/,/g, '')) || 0,
+      liquidity: parseFloat(String(m.liquidity || m.liquidityNum || 0).replace(/,/g, '')) || 0,
       endDate: m.endDate || m.end_date_iso || null,
-      image: m.image || '',
+      image: m.image || m.icon || '',
       active: m.active !== false,
       closed: m.closed === true,
       _raw: m,
     };
+  }
+
+  /** Bucket for category pills (Gamma categories are messy — normalize). */
+  function marketBucket(m) {
+    const cat = `${m.category || ''} ${m.groupItemTitle || ''}`.toLowerCase();
+    const q = `${m.question || ''}`.toLowerCase();
+    const s = `${cat} ${q}`;
+    if (/politic|election|trump|biden|congress|senate|house|vote|governor|president/.test(s)) return 'Politics';
+    if (/crypto|bitcoin|btc|eth|ethereum|defi|token|solana|nft|chain/.test(s)) return 'Crypto';
+    if (/nfl|nba|mlb|ufc|soccer|sport|olympic|game|vs\.|championship|super bowl/.test(s)) return 'Sports';
+    if (/tech|ai\b|openai|google|apple|tesla|science|space|nvidia|semiconductor/.test(s)) return 'Tech';
+    if (/pop|movie|music|celebr|oscar|grammy|entertainment/.test(s)) return 'Culture';
+    if (/econom|fed|gdp|inflation|recession|jobs|rate|market crash|stock/.test(s)) return 'Economy';
+    return 'Other';
   }
 
   return {
@@ -162,8 +217,9 @@ const PolymarketService = (() => {
     searchMarkets,
     getEvents,
     parseMarket,
-    fetchWithProxy,
     fetchAllMarkets,
     invalidateMarketsCache,
+    marketBucket,
+    fetchGammaPath,
   };
 })();
