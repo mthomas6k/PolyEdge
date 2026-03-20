@@ -113,7 +113,7 @@ async function login() {
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) { showMsg(errEl, error.message, 'err'); return; }
   await checkSession();
-  showPage('dashboard');
+  showPage('markets');
 }
 
 async function register() {
@@ -174,7 +174,7 @@ async function loadDashboard() {
   if (!container) return;
 
   if (!currentUser || !sb) {
-    container.innerHTML = '<div class="empty-state"><h3>Sign in to view your dashboard</h3><p>Create an account or sign in to track your evaluations.</p><button class="btn btn-primary" data-page="login">Sign In</button></div>';
+    container.innerHTML = '<div class="empty-state"><h3>Sign in to open Markets</h3><p>Create an account or sign in to trade and track evaluations.</p><button class="btn btn-primary" data-page="login">Sign In</button></div>';
     bindDataPage();
     return;
   }
@@ -313,7 +313,7 @@ async function loadLiveMarkets(query) {
     if (query && query.length > 1) {
       markets = await PolymarketService.searchMarkets(query);
     } else {
-      markets = await PolymarketService.getMarkets(24);
+      markets = await PolymarketService.getMarkets(96, 0);
     }
 
     if (!markets || markets.length === 0) {
@@ -359,6 +359,9 @@ function handleMarketSearch(e) {
 }
 
 function refreshMarkets() {
+  if (typeof PolymarketService !== 'undefined' && PolymarketService.invalidateMarketsCache) {
+    PolymarketService.invalidateMarketsCache();
+  }
   const input = document.getElementById('market-search-input');
   loadLiveMarkets(input?.value?.trim() || '');
 }
@@ -559,14 +562,17 @@ async function loadLeaderboard() {
     return;
   }
 
-  container.innerHTML = `<table class="lb-table"><thead><tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Status</th></tr></thead><tbody>${data.map((r,i)=>{
+  container.innerHTML = `<div class="lb-shell"><div class="lb-shell-head"><h2 class="lb-title">Top performers</h2><p class="lb-sub">Funded &amp; passed traders by return</p></div><div class="lb-table-wrap"><table class="lb-table"><thead><tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Status</th></tr></thead><tbody>${data.map((r,i)=>{
     const rankClass = i === 0 ? 'lb-rank-1' : i === 1 ? 'lb-rank-2' : i === 2 ? 'lb-rank-3' : '';
     return `<tr><td class="lb-rank ${rankClass}">${i+1}</td><td>${r.trader}</td><td>$${r.account_size}</td><td>${r.eval_type}</td><td style="color:var(--green)">+${r.return_pct}%</td><td>${r.trades_count}</td><td><span class="badge badge-ok">${r.status}</span></td></tr>`;
-  }).join('')}</tbody></table>`;
+  }).join('')}</tbody></table></div></div>`;
 }
 
 function renderEmptyLeaderboard() {
   return `
+    <div class="lb-shell lb-shell-empty">
+    <div class="lb-shell-head"><h2 class="lb-title">Leaderboard</h2><p class="lb-sub">Be the first funded trader on the board</p></div>
+    <div class="lb-table-wrap">
     <table class="lb-table">
       <thead>
         <tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Win Rate</th><th>Status</th></tr>
@@ -579,7 +585,7 @@ function renderEmptyLeaderboard() {
         <tr class="lb-empty-row"><td>4</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
         <tr class="lb-empty-row"><td>5</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
       </tbody>
-    </table>`;
+    </table></div></div>`;
 }
 
 // ==========================================
@@ -670,7 +676,7 @@ async function loadPolyEdgeStats() {
   const container = document.getElementById('stats-content');
   if (!container) return;
   if (!currentUser || !sb) {
-    container.innerHTML = '<div class="an-center"><div class="an-connect-box"><h2>Sign In to View Stats</h2><p>Your PolyEdge stats are only available when you are logged in.</p><button class="form-btn" data-page="login">Sign In →</button></div></div>';
+    container.innerHTML = '<div class="an-center"><div class="an-connect-box"><h2>Sign In to View Dashboard</h2><p>Your evaluation dashboard is only available when you are logged in.</p><button class="form-btn" data-page="login">Sign In →</button></div></div>';
     bindDataPage();
     return;
   }
@@ -682,7 +688,7 @@ async function loadPolyEdgeStats() {
     return;
   }
 
-  container.innerHTML = '<div class="an-center"><div class="an-loading"><div class="an-spinner"></div><div class="an-loading-text">Loading PolyEdge stats<span class="an-dots"></span></div></div></div>';
+  container.innerHTML = '<div class="an-center"><div class="an-loading"><div class="an-spinner"></div><div class="an-loading-text">Loading dashboard<span class="an-dots"></span></div></div></div>';
   let d = 0;
   const iv = setInterval(() => {
     const dotsEl = container.querySelector('.an-dots');
@@ -1129,6 +1135,21 @@ window.startChallenge = startChallenge;
 // ==========================================
 // NAVIGATION
 // ==========================================
+function updateShellBackground(pageId) {
+  if (window.MatrixRain) {
+    if (pageId === 'home' || pageId === 'login') window.MatrixRain.disable();
+    else window.MatrixRain.enable();
+  }
+  if (window.LoginNetwork) {
+    if (pageId === 'login') {
+      window.LoginNetwork.mount('login-page-bg');
+      window.LoginNetwork.enable();
+    } else {
+      window.LoginNetwork.disable();
+    }
+  }
+}
+
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
@@ -1139,14 +1160,16 @@ function showPage(id) {
   const link = document.querySelector(`.nav-links a[data-page="${id}"]`);
   if (link) link.classList.add('active');
 
+  updateShellBackground(id);
+
   // Load page-specific data
-  if (id === 'dashboard') loadDashboard();
+  if (id === 'markets') loadDashboard();
   if (id === 'leaderboard') loadLeaderboard();
   if (id === 'admin' && currentProfile?.is_admin) loadAdmin();
-  if (id === 'polymarket') loadAnalytics();
+  if (id === 'wallet') loadAnalytics();
   if (id === 'accounts') loadAccounts();
   if (id === 'certificate') loadCertificate();
-  if (id === 'stats') loadPolyEdgeStats();
+  if (id === 'dashboard') loadPolyEdgeStats();
   if (id === 'settings') loadSettings();
 
   // Homepage animations
@@ -1178,6 +1201,10 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 // ==========================================
 document.addEventListener('DOMContentLoaded', async function() {
   bindDataPage();
+
+  const initialPage = document.querySelector('.page.active');
+  const initialId = initialPage?.id?.replace(/^page-/, '') || 'home';
+  updateShellBackground(initialId);
 
   // Mobile nav toggle
   const menuToggle = document.getElementById('nav-menu-toggle');
@@ -1226,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.history.replaceState({}, '', window.location.pathname || '/');
     await checkSession();
     alert('Payment received! Your evaluation will be activated shortly.');
-    showPage('dashboard');
+    showPage('markets');
   } else if (params.get('payment') === 'cancelled') {
     window.history.replaceState({}, '', window.location.pathname || '/');
   }

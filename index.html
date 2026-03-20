@@ -7,7 +7,7 @@
   <title>PolyEdge — Polymarket Prop Betting</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,13 +23,11 @@
       <span></span>
     </button>
     <div class="nav-links" id="nav-links">
-      <a data-page="home" class="active">Home</a>
       <a data-page="challenges">Challenges</a>
-      <a data-page="rules">Rules</a>
       <a data-page="leaderboard">Leaderboard</a>
-      <a data-page="polymarket" class="auth-only">Polymarket</a>
-      <a data-page="stats" class="auth-only">PolyEdge Stats</a>
+      <a data-page="wallet" class="auth-only">Wallet</a>
       <a data-page="dashboard" class="auth-only">Dashboard</a>
+      <a data-page="markets" class="auth-only">Markets</a>
       <a data-page="accounts" class="auth-only">Accounts</a>
       <a data-page="settings" class="auth-only">Settings</a>
       <a data-page="admin" class="admin-only">Admin</a>
@@ -66,7 +64,26 @@
       </div>
       <div class="hero-buttons">
         <button class="btn btn-primary hero-cta-animated" data-page="challenges">View Challenges →</button>
-        <button class="btn btn-ghost" data-page="rules">How It Works</button>
+        <button class="btn btn-ghost" data-page="rules">Full rules</button>
+      </div>
+    </div>
+
+    <div class="section rules-at-a-glance">
+      <div class="section-tag">Before you trade</div>
+      <h2>Rules at a glance</h2>
+      <p class="rules-at-a-glance-lead">Quick summary — full details are on the <a href="#" data-page="rules" class="inline-link">Rules</a> page and in <a href="#" data-page="accounts" class="inline-link">Accounts</a> after you sign in.</p>
+      <div class="rules-glance-grid">
+        <div class="rules-glance-card"><span class="rg-num">01</span><h4>Profit target</h4><p>Hit your % target within the evaluation window (e.g. 10% one-step).</p></div>
+        <div class="rules-glance-card"><span class="rg-num">02</span><h4>Max drawdown</h4><p>Stay below the drawdown limit from your high-water mark.</p></div>
+        <div class="rules-glance-card"><span class="rg-num">03</span><h4>Consistency</h4><p>No single winning trade can be too large vs. total profit.</p></div>
+        <div class="rules-glance-card"><span class="rg-num">04</span><h4>Min trades & sizing</h4><p>Meet minimum trades; max position size per rules.</p></div>
+      </div>
+    </div>
+
+    <div class="payment-marquee-wrap" aria-hidden="true">
+      <div class="payment-marquee">
+        <span>Visa</span><span>Mastercard</span><span>Apple Pay</span><span>Google Pay</span><span>PayPal</span><span>Discover</span><span>USDC</span>
+        <span>Visa</span><span>Mastercard</span><span>Apple Pay</span><span>Google Pay</span><span>PayPal</span><span>Discover</span><span>USDC</span>
       </div>
     </div>
 
@@ -329,24 +346,24 @@
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
-  <!-- ========== POLYMARKET ANALYTICS ========== -->
-  <div id="page-polymarket" class="page">
+  <!-- ========== WALLET (Polymarket portfolio analytics) ========== -->
+  <div id="page-wallet" class="page">
     <div id="analytics-content">
-      <!-- Rendered by analytics.js (Polymarket wallet analytics) -->
+      <!-- Rendered by analytics.js -->
     </div>
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
-  <!-- ========== POLYEDGE INTERNAL STATS ========== -->
-  <div id="page-stats" class="page">
+  <!-- ========== DASHBOARD (evaluation stats / PolyEdge internal) ========== -->
+  <div id="page-dashboard" class="page">
     <div id="stats-content" style="max-width:1200px;margin:0 auto;padding:28px 32px">
       <!-- Rendered by app.js (Supabase evaluation stats) -->
     </div>
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
-  <!-- ========== DASHBOARD ========== -->
-  <div id="page-dashboard" class="page">
+  <!-- ========== MARKETS (evaluation + live Polymarket browse) ========== -->
+  <div id="page-markets" class="page">
     <div id="dash-content" style="padding:20px">
       <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
     </div>
@@ -433,7 +450,8 @@
 
   <!-- ========== LOGIN ========== -->
   <div id="page-login" class="page">
-    <div id="auth-login">
+    <div class="login-page-bg" id="login-page-bg">
+      <div id="auth-login">
       <div class="auth-box">
         <h2>Sign In</h2>
         <div class="sub">Access your dashboard and evaluations</div>
@@ -476,6 +494,7 @@
         <div class="auth-toggle">Already have an account? <a onclick="toggleAuth('login')">Sign In</a></div>
       </div>
     </div>
+    </div>
   </div>
 
   <!-- ========== SETTINGS ========== -->
@@ -506,6 +525,23 @@
           <button class="form-btn" style="width:auto" onclick="saveSettings()">Save Settings →</button>
           <span id="settings-status" class="settings-status"></span>
         </div>
+      </div>
+      <div class="settings-card" style="margin-top:24px">
+        <h3 class="settings-subh">Preferences</h3>
+        <p class="settings-hint">More options will tie into email alerts and payouts as we ship them.</p>
+        <label class="settings-toggle-row">
+          <input type="checkbox" id="settings-notify-email" checked disabled>
+          <span>Evaluation &amp; payout emails <small>(coming soon)</small></span>
+        </label>
+        <label class="settings-toggle-row">
+          <input type="checkbox" id="settings-notify-marketing" disabled>
+          <span>Product updates &amp; tips <small>(opt-in later)</small></span>
+        </label>
+      </div>
+      <div class="settings-card" style="margin-top:24px">
+        <h3 class="settings-subh">Data</h3>
+        <p class="settings-hint">Export your challenge history for your records.</p>
+        <button type="button" class="form-btn secondary" style="width:auto" onclick="alert('Export will include trades and evaluations — wiring to Supabase next.')">Request data export</button>
       </div>
     </div>
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
@@ -640,9 +676,9 @@
         <a data-page="challenges">Challenges</a>
         <a data-page="rules">Rules</a>
         <a data-page="leaderboard">Leaderboard</a>
-        <a data-page="polymarket" class="auth-only">Polymarket</a>
-        <a data-page="stats" class="auth-only">PolyEdge Stats</a>
+        <a data-page="wallet" class="auth-only">Wallet</a>
         <a data-page="dashboard" class="auth-only">Dashboard</a>
+        <a data-page="markets" class="auth-only">Markets</a>
         <a data-page="accounts" class="auth-only">Accounts</a>
         <a data-page="settings" class="auth-only">Settings</a>
       </div>
@@ -668,9 +704,11 @@
   <script src="js/polymarketService.js"></script>
   <script src="js/calendarComponent.js"></script>
   <script src="js/accountManager.js"></script>
+  <script src="js/matrixRain.js"></script>
+  <script src="js/loginNetwork.js"></script>
   <script src="js/homepageAnimations.js"></script>
-  <script src="js/analytics.js?v=6"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/analytics.js?v=7"></script>
+  <script src="js/app.js?v=8"></script>
   <script src="js/terminalBg.js"></script>
 
 </body>

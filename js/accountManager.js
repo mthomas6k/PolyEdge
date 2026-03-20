@@ -87,6 +87,7 @@ const AccountManager = (() => {
         <div class="section" style="padding-top:32px">
           <div class="section-tag">Accounts</div>
           <h2>Your Evaluations</h2>
+          <p class="acct-rules-tip">Eval rules: profit target, max drawdown, consistency, min trades — see <a href="#" data-page="rules" class="inline-link">full Rules</a> for your challenge type.</p>
           <div class="acct-grid">
             ${accounts.map(a => {
               const isSelected = a.id === selectedAccountId;

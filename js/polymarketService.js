@@ -1,6 +1,6 @@
 // ==========================================
-// POLYMARKET SERVICE
-// polymarketService.js — API integration with rotating CORS proxies
+// POLYMARKET SERVICE — Gamma API via CORS proxies
+// Fetches many pages of markets into one cache; search filters client-side.
 // ==========================================
 
 const PolymarketService = (() => {
@@ -8,15 +8,20 @@ const PolymarketService = (() => {
     (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url) => `https://proxy.cors.sh/${url}`,
-    (url) => `https://cors-anywhere.herokuapp.com/${url}`,
   ];
 
   const GAMMA_API = 'https://gamma-api.polymarket.com';
+  const PAGE_SIZE = 100;
+  const MAX_MARKETS = 600;
 
   let proxyIndex = 0;
-  let marketsCache = [];
-  let lastFetch = 0;
-  const CACHE_TTL = 30000;
+
+  let fullCache = { list: [], ts: 0 };
+  const CACHE_TTL_MS = 90000;
+
+  function invalidateMarketsCache() {
+    fullCache = { list: [], ts: 0 };
+  }
 
   async function fetchWithProxy(url, attempt = 0) {
     if (attempt >= PROXIES.length) {
@@ -25,10 +30,10 @@ const PolymarketService = (() => {
     const proxy = PROXIES[(proxyIndex + attempt) % PROXIES.length];
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+      const timeout = setTimeout(() => controller.abort(), 12000);
       const r = await fetch(proxy(url), {
         headers: { 'x-requested-with': 'XMLHttpRequest' },
-        signal: controller.signal
+        signal: controller.signal,
       });
       clearTimeout(timeout);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -42,35 +47,57 @@ const PolymarketService = (() => {
     }
   }
 
-  async function getMarkets(limit = 30, offset = 0) {
+  /**
+   * Pull multiple pages from Gamma until empty or MAX_MARKETS.
+   */
+  async function fetchAllMarkets(force = false) {
     const now = Date.now();
-    if (marketsCache.length > 0 && (now - lastFetch) < CACHE_TTL) {
-      return marketsCache;
+    if (
+      !force &&
+      fullCache.list.length > 0 &&
+      now - fullCache.ts < CACHE_TTL_MS
+    ) {
+      return fullCache.list;
     }
-    try {
-      const data = await fetchWithProxy(
-        `${GAMMA_API}/markets?limit=${limit}&offset=${offset}&active=true&closed=false&order=volume&ascending=false`
-      );
-      const markets = Array.isArray(data) ? data : [];
-      marketsCache = markets;
-      lastFetch = now;
-      return markets;
-    } catch (e) {
-      console.warn('getMarkets failed:', e);
-      return marketsCache.length > 0 ? marketsCache : [];
+
+    const all = [];
+    let offset = 0;
+
+    while (offset < MAX_MARKETS) {
+      const url = `${GAMMA_API}/markets?limit=${PAGE_SIZE}&offset=${offset}&active=true&closed=false&order=volume&ascending=false`;
+      let batch;
+      try {
+        batch = await fetchWithProxy(url);
+      } catch (e) {
+        console.warn('fetchAllMarkets batch failed:', e);
+        break;
+      }
+      if (!Array.isArray(batch) || batch.length === 0) break;
+      all.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
     }
+
+    fullCache = { list: all, ts: now };
+    return all;
+  }
+
+  async function getMarkets(limit = 48, offset = 0) {
+    const all = await fetchAllMarkets(false);
+    return all.slice(offset, offset + limit);
   }
 
   async function searchMarkets(query) {
-    try {
-      const data = await fetchWithProxy(
-        `${GAMMA_API}/markets?limit=20&active=true&closed=false&title_contains=${encodeURIComponent(query)}`
-      );
-      return Array.isArray(data) ? data : [];
-    } catch (e) {
-      console.warn('searchMarkets failed:', e);
-      return [];
-    }
+    const q = (query || '').trim().toLowerCase();
+    const all = await fetchAllMarkets(false);
+    if (!q) return all.slice(0, 200);
+    return all
+      .filter((m) => {
+        const t = (m.question || m.title || '').toLowerCase();
+        const slug = (m.slug || '').toLowerCase();
+        return t.includes(q) || slug.includes(q.replace(/\s+/g, '-'));
+      })
+      .slice(0, 200);
   }
 
   async function getEvents(limit = 20) {
@@ -89,19 +116,27 @@ const PolymarketService = (() => {
     const outcomePrices = (() => {
       try {
         if (m.outcomePrices) {
-          return typeof m.outcomePrices === 'string' ? JSON.parse(m.outcomePrices) : m.outcomePrices;
+          return typeof m.outcomePrices === 'string'
+            ? JSON.parse(m.outcomePrices)
+            : m.outcomePrices;
         }
         return [0.5, 0.5];
-      } catch { return [0.5, 0.5]; }
+      } catch {
+        return [0.5, 0.5];
+      }
     })();
 
     const outcomes = (() => {
       try {
         if (m.outcomes) {
-          return typeof m.outcomes === 'string' ? JSON.parse(m.outcomes) : m.outcomes;
+          return typeof m.outcomes === 'string'
+            ? JSON.parse(m.outcomes)
+            : m.outcomes;
         }
         return ['Yes', 'No'];
-      } catch { return ['Yes', 'No']; }
+      } catch {
+        return ['Yes', 'No'];
+      }
     })();
 
     return {
@@ -118,9 +153,17 @@ const PolymarketService = (() => {
       image: m.image || '',
       active: m.active !== false,
       closed: m.closed === true,
-      _raw: m
+      _raw: m,
     };
   }
 
-  return { getMarkets, searchMarkets, getEvents, parseMarket, fetchWithProxy };
+  return {
+    getMarkets,
+    searchMarkets,
+    getEvents,
+    parseMarket,
+    fetchWithProxy,
+    fetchAllMarkets,
+    invalidateMarketsCache,
+  };
 })();
