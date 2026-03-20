@@ -14,8 +14,15 @@ var current = '';
 var currentCls = 'mid';
 var currentIsAi = false;
 
+    // Export terminal cursor state so other hero effects can sync.
+    var terminalState =
+      window.terminalState || (window.terminalState = { cursorOn: true, isPolywog: false });
+    terminalState.cursorOn = true;
+    terminalState.isPolywog = false;
+
 setInterval(function() {
   cv = !cv;
+  if (terminalState.cursorOn !== cv) terminalState.cursorOn = cv;
   var els = host.querySelectorAll('.cur,.curai');
   for (var i = 0; i < els.length; i++) {
     els[i].style.opacity = cv ? '1' : '0';
@@ -54,11 +61,13 @@ function glowTarget(cls) {
 
 function renderActive() {
   if (currentIsAi) {
+    if (!terminalState.isPolywog) terminalState.isPolywog = true;
     activeLineEl.classList.add('term-ai-active');
     activeLineEl.style.textAlign = 'right';
     activeLineEl.innerHTML = esc(current) + '<span class="curai" id="cur"></span>';
     return;
   }
+  if (terminalState.isPolywog) terminalState.isPolywog = false;
   activeLineEl.classList.remove('term-ai-active');
   activeLineEl.style.textAlign = 'left';
   var base = classRGB[currentCls] || classRGB.mid;

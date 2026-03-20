@@ -673,5 +673,78 @@
   <script src="js/app.js?v=7"></script>
   <script src="js/terminalBg.js"></script>
 
+  <script>
+    // Terminal-driven hero text reflection (text only; synced to terminal cursor blink + polywog mode)
+    (function () {
+      var hero = document.querySelector('#page-home .hero');
+      if (!hero) return;
+
+      var title = hero.querySelector('h1');
+      var edgeSpan = title ? title.querySelector('span') : null;
+      var subtitle = hero.querySelector('p');
+      var buttons = hero.querySelectorAll('.hero-buttons button, .hero-buttons a');
+
+      if (!title) return;
+
+      var strongEls = [];
+      if (edgeSpan) strongEls.push(edgeSpan);
+      strongEls.push(title);
+
+      var weakEls = [];
+      if (subtitle) weakEls.push(subtitle);
+      for (var i = 0; i < buttons.length; i++) weakEls.push(buttons[i]);
+
+      // Blue (main cursor / left-bottom source)
+      var blueStrong =
+        '-10px 14px 46px rgba(60,130,255,0.25), -2px 6px 62px rgba(40,100,220,0.12)';
+      var blueTitle =
+        '-8px 12px 40px rgba(60,130,255,0.16), -2px 6px 60px rgba(40,100,220,0.08)';
+      var blueWeak =
+        '-6px 10px 28px rgba(60,130,255,0.10), -1px 4px 40px rgba(40,100,220,0.05)';
+
+      // White / cool silver (polywog cursor / right-bottom source)
+      var whiteStrong =
+        '10px 14px 46px rgba(210,225,255,0.18), 2px 6px 62px rgba(190,210,245,0.09)';
+      var whiteTitle =
+        '8px 12px 40px rgba(210,225,255,0.14), 2px 6px 60px rgba(190,210,245,0.07)';
+      var whiteWeak =
+        '6px 10px 28px rgba(210,225,255,0.09), 1px 4px 40px rgba(190,210,245,0.045)';
+
+      function setTextShadow(els, shadow) {
+        for (var i = 0; i < els.length; i++) {
+          if (!els[i]) continue;
+          els[i].style.transition = 'text-shadow 0.4s ease';
+          els[i].style.textShadow = shadow;
+        }
+      }
+
+      function clearTextShadow(els) {
+        for (var i = 0; i < els.length; i++) {
+          if (!els[i]) continue;
+          els[i].style.textShadow = 'none';
+        }
+      }
+
+      function tick() {
+        var state = window.terminalState;
+        if (!state || !state.cursorOn) {
+          clearTextShadow(strongEls);
+          clearTextShadow(weakEls);
+          return;
+        }
+
+        var isPoly = !!state.isPolywog;
+        // Keep "Edge" slightly stronger than the rest of the title.
+        if (edgeSpan) setTextShadow([edgeSpan], isPoly ? whiteStrong : blueStrong);
+        setTextShadow([title], isPoly ? whiteTitle : blueTitle);
+        setTextShadow(weakEls, isPoly ? whiteWeak : blueWeak);
+      }
+
+      // Start immediately, then keep it synced with cursor blink.
+      tick();
+      setInterval(tick, 100);
+    })();
+  </script>
+
 </body>
 </html>
