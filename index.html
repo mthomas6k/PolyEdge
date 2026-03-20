@@ -14,17 +14,16 @@
 
   <!-- ========== NAV ========== -->
   <nav>
-    <div class="nav-logo" onclick="showPage('home')">
-      <span class="dot"></span> PolyEdge
-    </div>
     <button class="nav-menu-toggle" id="nav-menu-toggle" aria-label="Toggle navigation">
       <span></span>
       <span></span>
       <span></span>
     </button>
+    <div class="nav-logo" onclick="showPage('home')">
+      <span class="dot"></span> PolyEdge
+    </div>
     <div class="nav-links" id="nav-links">
       <a data-page="challenges">Challenges</a>
-      <a data-page="profit">Estimator</a>
       <a data-page="leaderboard">Leaderboard</a>
       <a data-page="wallet" class="auth-only">Wallet</a>
       <a data-page="dashboard" class="auth-only">Dashboard</a>
@@ -70,6 +69,44 @@
       </div>
     </div>
 
+    <div id="home-estimator" class="section home-estimator">
+      <div class="section-tag">Tools</div>
+      <h2>Position &amp; risk estimator</h2>
+      <p class="estimator-lead">Sketch payouts and expected value. Tune win-rate and risk to see a plain-English trader profile — no wallet required.</p>
+      <div class="estimator-grid">
+        <div class="form-group">
+          <label class="form-label">Size ($ deployed)</label>
+          <input class="form-input" id="pf-size" type="number" min="1" step="1" value="100" oninput="profitCalc()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Avg entry (¢)</label>
+          <input class="form-input" id="pf-entry" type="number" min="1" max="99" step="1" value="45" oninput="profitCalc()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your win rate guess (%)</label>
+          <input class="form-input" id="pf-winrate" type="number" min="5" max="95" step="1" value="55" oninput="profitCalc()" title="How often you think you’d be right at this entry">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Risk posture</label>
+          <select class="form-select" id="pf-risk" onchange="profitCalc()">
+            <option value="low">Conservative</option>
+            <option value="med" selected>Balanced</option>
+            <option value="high">Aggressive</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gross payout if Yes ($)</label>
+          <div id="pf-out-yes" class="estimator-out">—</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Profit if Yes ($)</label>
+          <div id="pf-maxp" class="estimator-out">—</div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="profitCalc()">Update</button>
+      <div id="pf-trader-summary" class="estimator-summary"></div>
+    </div>
+
     <div class="section rules-at-a-glance">
       <div class="section-tag">Before you trade</div>
       <h2>Rules at a glance</h2>
@@ -83,9 +120,17 @@
     </div>
 
     <div class="payment-marquee-wrap" aria-hidden="true">
-      <div class="payment-marquee">
-        <span>Visa</span><span>Mastercard</span><span>Apple Pay</span><span>Google Pay</span><span>PayPal</span><span>Discover</span><span>USDC</span>
-        <span>Visa</span><span>Mastercard</span><span>Apple Pay</span><span>Google Pay</span><span>PayPal</span><span>Discover</span><span>USDC</span>
+      <div class="payment-marquee-fade payment-marquee-fade--l"></div>
+      <div class="payment-marquee-fade payment-marquee-fade--r"></div>
+      <div class="payment-marquee-viewport">
+        <div class="payment-marquee-track">
+          <div class="payment-marquee-set">
+            <span class="pay-chip">💳 Visa</span><span class="pay-chip">💳 Mastercard</span><span class="pay-chip">Apple Pay</span><span class="pay-chip">Google Pay</span><span class="pay-chip">PayPal</span><span class="pay-chip">Discover</span><span class="pay-chip">USDC</span>
+          </div>
+          <div class="payment-marquee-set" aria-hidden="true">
+            <span class="pay-chip">💳 Visa</span><span class="pay-chip">💳 Mastercard</span><span class="pay-chip">Apple Pay</span><span class="pay-chip">Google Pay</span><span class="pay-chip">PayPal</span><span class="pay-chip">Discover</span><span class="pay-chip">USDC</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -366,7 +411,7 @@
 
   <!-- ========== MARKETS (evaluation + live Polymarket browse) ========== -->
   <div id="page-markets" class="page">
-    <div id="dash-content" style="padding:20px">
+    <div id="dash-content">
       <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
     </div>
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
@@ -451,34 +496,6 @@
   </div>
 
   <!-- ========== PROFIT ESTIMATOR ========== -->
-  <div id="page-profit" class="page">
-    <div class="section profit-wrap">
-      <div class="section-tag">Tools</div>
-      <h2>Position estimator</h2>
-      <p class="profit-lead">Binary contracts pay $1 each if they resolve in your favor. This is a quick payout sketch (excluding fees).</p>
-      <div class="profit-grid">
-        <div class="form-group">
-          <label class="form-label">Size ($ deployed)</label>
-          <input class="form-input" id="pf-size" type="number" min="1" step="1" value="100" oninput="profitCalc()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Avg entry (¢)</label>
-          <input class="form-input" id="pf-entry" type="number" min="1" max="99" step="1" value="45" oninput="profitCalc()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Gross payout if Yes ($)</label>
-          <div id="pf-out-yes" class="profit-out">—</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Profit if Yes ($)</label>
-          <div id="pf-maxp" class="profit-out">—</div>
-        </div>
-      </div>
-      <button type="button" class="btn btn-primary" onclick="profitCalc()">Recalculate</button>
-    </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
-  </div>
-
   <!-- ========== LOGIN ========== -->
   <div id="page-login" class="page">
     <div class="login-page-bg" id="login-page-bg">
@@ -718,7 +735,7 @@
         <a data-page="certificate">Certificate</a>
         <a data-page="education">Prediction Markets</a>
         <a data-page="faq">FAQ</a>
-        <a data-page="profit">Profit estimator</a>
+        <a data-page="profit">Position estimator</a>
       </div>
       <div class="bottom-nav-group">
         <span class="bottom-nav-label">PolyEdge</span>
@@ -740,7 +757,7 @@
   <script src="js/loginNetwork.js"></script>
   <script src="js/homepageAnimations.js"></script>
   <script src="js/analytics.js?v=7"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/app.js?v=10"></script>
   <script src="js/terminalBg.js"></script>
 
 </body>

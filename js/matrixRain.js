@@ -1,4 +1,4 @@
-// Blue “matrix” rain — viewport-fixed, solid frame clear (no column banding).
+// Blue matrix rain — light fade trail (no harsh vertical banding: uniform rgba overlay).
 (function () {
   var canvas = null;
   var ctx = null;
@@ -12,6 +12,7 @@
     'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789ABCDEFｦｧｨｩｪ';
 
   var BG = '#04060a';
+  var TRAIL_ALPHA = 0.088;
 
   function resize() {
     if (!canvas) return;
@@ -39,8 +40,8 @@
       return;
     }
 
-    // Full solid clear each frame — removes vertical “stripe” artifacts from alpha trails
-    ctx.fillStyle = BG;
+    // Uniform dim overlay = classic Matrix trail (same alpha everywhere → no column stripes)
+    ctx.fillStyle = 'rgba(4, 6, 10, ' + TRAIL_ALPHA + ')';
     ctx.fillRect(0, 0, w, h);
 
     ctx.font = '600 ' + fontSize + 'px ui-monospace, Menlo, monospace';
@@ -50,11 +51,11 @@
       var ch = chars[Math.floor(Math.random() * chars.length)];
       var x = i * fontSize + 0.5;
       var y = drops[i] * fontSize;
-      var flicker = 0.2 + Math.random() * 0.55;
-      ctx.fillStyle = 'rgba(120, 190, 255, ' + flicker + ')';
+      var flicker = 0.35 + Math.random() * 0.5;
+      ctx.fillStyle = 'rgba(140, 210, 255, ' + flicker + ')';
       ctx.fillText(ch, x, y);
 
-      if (y > h && Math.random() > 0.975) {
+      if (y > h && Math.random() > 0.97) {
         drops[i] = 0;
       }
       drops[i] += 0.55 + Math.random() * 0.45;
@@ -71,7 +72,7 @@
     canvas.style.cssText =
       'position:fixed;left:0;top:0;width:100vw;height:100vh;max-width:100vw;max-height:100vh;z-index:1;pointer-events:none;display:none;';
     document.body.insertBefore(canvas, document.body.firstChild);
-    ctx = canvas.getContext('2d', { alpha: false });
+    ctx = canvas.getContext('2d', { alpha: true });
     resize();
     window.addEventListener('resize', resize);
   }
@@ -83,6 +84,8 @@
       if (!running) {
         running = true;
         resize();
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
         draw();
       }
     },

@@ -233,6 +233,49 @@ function pmFmtDate(iso) {
   }
 }
 
+function pmHashStr(s) {
+  let h = 0;
+  const str = String(s || '');
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/** Fake “price history” curve for diagram (no historical API). */
+function pmSparklineSVG(slug, w, h, uid) {
+  const n = 28;
+  let seed = pmHashStr(slug);
+  const pts = [];
+  let v = 35 + (seed % 25);
+  for (let i = 0; i < n; i++) {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    v = Math.max(6, Math.min(94, v + (seed % 11) - 5));
+    pts.push(v);
+  }
+  const step = w / (n - 1);
+  let d = '';
+  pts.forEach((p, i) => {
+    const x = i * step;
+    const y = h - (p / 100) * h;
+    d += (i ? ' L ' : 'M ') + x.toFixed(1) + ',' + y.toFixed(1);
+  });
+  const gid = 'pmg' + uid;
+  return `<svg class="pm-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3888e8"/><stop offset="1" stop-color="#3dd68a"/></linearGradient></defs><path d="${d}" fill="none" stroke="url(#${gid})" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function pmMetricsHtml(pm) {
+  const spread = Math.abs(pm.yesPrice - pm.noPrice);
+  const spreadC = Math.round(spread * 100);
+  const liqScore = Math.min(100, Math.log10(10 + pm.liquidity) * 18);
+  const volScore = Math.min(100, Math.log10(10 + pm.volume) * 14);
+  return `
+    <div class="pm-metrics">
+      <div class="pm-metric"><span class="pm-metric-l">Liquidity</span><div class="pm-metric-bar"><span style="width:${liqScore.toFixed(0)}%;background:linear-gradient(90deg,#3888e8,#3dd68a)"></span></div><span class="pm-metric-v">${pmFmtVol(pm.liquidity)}</span></div>
+      <div class="pm-metric"><span class="pm-metric-l">Volume</span><div class="pm-metric-bar"><span style="width:${volScore.toFixed(0)}%;background:linear-gradient(90deg,#2a6cc4,#5aa6ff)"></span></div><span class="pm-metric-v">${pmFmtVol(pm.volume)}</span></div>
+      <div class="pm-metric-row"><span>Yes / No spread</span><span class="pm-metric-strong">${spreadC}¢</span></div>
+      <div class="pm-metric-row"><span>Implied Yes</span><span class="pm-metric-strong">${(pm.yesPrice * 100).toFixed(1)}¢</span></div>
+    </div>`;
+}
+
 function getFilteredMarkets() {
   let list = PM_STATE.raw.slice();
   const q = PM_STATE.query.trim().toLowerCase();
@@ -284,6 +327,7 @@ function renderPmCard(m, canBet, idx) {
   const noP = Math.round(pm.noPrice * 100);
   const pct = yesP;
   const slug = pm.slug || '';
+  const uid = pmHashStr(slug + idx) % 100000;
   const polyUrl = slug ? `https://polymarket.com/event/${encodeURIComponent(slug)}` : 'https://polymarket.com';
   const img = pm.image
     ? `<img class="pm-card-img" src="${String(pm.image).replace(/"/g, '&quot;')}" alt="" loading="lazy" onerror="this.style.display='none'">`
@@ -297,14 +341,20 @@ function renderPmCard(m, canBet, idx) {
         ${img}
         <div class="pm-card-headtext">
           <div class="pm-card-title-row">
-            <h4 class="pm-card-title">${truncateStr(pm.question, 72)}</h4>
+            <h4 class="pm-card-title">${truncateStr(pm.question, 200)}</h4>
             <span class="pm-live-badge">⚡ Live</span>
           </div>
           <div class="pm-bucket">${PolymarketService.marketBucket(m)}</div>
         </div>
       </div>
-      <div class="pm-card-chance"><span class="pm-pct">${pct}%</span> <span class="pm-chance-label">chance</span></div>
-      <div class="pm-progress"><div class="pm-progress-fill" style="width:${Math.min(100, pct)}%"></div></div>
+      <div class="pm-card-mid">
+        <div class="pm-card-mid-left">
+          <div class="pm-card-chance"><span class="pm-pct">${pct}%</span> <span class="pm-chance-label">chance</span></div>
+          <div class="pm-progress"><div class="pm-progress-fill" style="width:${Math.min(100, pct)}%"></div></div>
+          ${pmMetricsHtml(pm)}
+        </div>
+        <div class="pm-card-mid-chart">${pmSparklineSVG(slug, 120, 56, uid)}</div>
+      </div>
       <div class="pm-card-btns">
         <button type="button" class="pm-btn-yes market-price-btn market-price-yes${dis}" ${onY}>Yes ${yesP}¢</button>
         <button type="button" class="pm-btn-no market-price-btn market-price-no${dis}" ${onN}>No ${noP}¢</button>
@@ -322,24 +372,32 @@ function renderFeaturedCard(m, canBet, idx) {
   const yesP = Math.round(pm.yesPrice * 100);
   const noP = Math.round(pm.noPrice * 100);
   const slug = pm.slug || '';
+  const uid = pmHashStr('feat' + slug) % 100000;
   const polyUrl = slug ? `https://polymarket.com/event/${encodeURIComponent(slug)}` : 'https://polymarket.com';
   const dis = canBet ? '' : ' disabled';
   const onY = canBet ? `onclick="openMarketBetByIdx(${idx},'YES')"` : '';
   const onN = canBet ? `onclick="openMarketBetByIdx(${idx},'NO')"` : '';
   return `
     <div class="pm-featured-inner">
-      <div class="pm-featured-copy">
-        <span class="pm-live-badge">Featured</span>
-        <h3 class="pm-featured-title">${truncateStr(pm.question, 120)}</h3>
-        <div class="pm-card-chance pm-featured-chance"><span class="pm-pct">${yesP}%</span> <span class="pm-chance-label">chance</span></div>
-        <div class="pm-progress pm-featured-bar"><div class="pm-progress-fill" style="width:${Math.min(100, yesP)}%"></div></div>
-        <div class="pm-featured-btns">
-          <button type="button" class="pm-btn-yes market-price-btn market-price-yes${dis}" ${onY}>Yes ${yesP}¢</button>
-          <button type="button" class="pm-btn-no market-price-btn market-price-no${dis}" ${onN}>No ${noP}¢</button>
+      <div class="pm-featured-grid">
+        <div class="pm-featured-copy">
+          <span class="pm-live-badge">Featured</span>
+          <h3 class="pm-featured-title">${truncateStr(pm.question, 220)}</h3>
+          <div class="pm-card-chance pm-featured-chance"><span class="pm-pct">${yesP}%</span> <span class="pm-chance-label">chance</span></div>
+          <div class="pm-progress pm-featured-bar"><div class="pm-progress-fill" style="width:${Math.min(100, yesP)}%"></div></div>
+          ${pmMetricsHtml(pm)}
+          <div class="pm-featured-btns">
+            <button type="button" class="pm-btn-yes market-price-btn market-price-yes${dis}" ${onY}>Yes ${yesP}¢</button>
+            <button type="button" class="pm-btn-no market-price-btn market-price-no${dis}" ${onN}>No ${noP}¢</button>
+          </div>
+          <div class="pm-featured-meta">
+            <span>${pmFmtVol(pm.volume)} volume</span>
+            <a class="pm-poly-link" href="${polyUrl}" target="_blank" rel="noopener">View market →</a>
+          </div>
         </div>
-        <div class="pm-featured-meta">
-          <span>${pmFmtVol(pm.volume)} volume</span>
-          <a class="pm-poly-link" href="${polyUrl}" target="_blank" rel="noopener">View market →</a>
+        <div class="pm-featured-chart-wrap">
+          <div class="pm-featured-chart-label">Synthetic odds path</div>
+          ${pmSparklineSVG(slug, 200, 100, uid)}
         </div>
       </div>
     </div>`;
@@ -353,7 +411,7 @@ function renderTrendRow(m, idx, canBet) {
   return `
     <button type="button" class="pm-trend-row${dis}" ${click}>
       <span class="pm-trend-pct">${p}%</span>
-      <span class="pm-trend-q">${truncateStr(pm.question, 48)}</span>
+      <span class="pm-trend-q">${truncateStr(pm.question, 120)}</span>
       <span class="pm-trend-v">${pmFmtVol(pm.volume)}</span>
     </button>`;
 }
@@ -442,11 +500,14 @@ function updateNavTicker(markets) {
     return;
   }
   const slice = markets.slice(0, 28);
-  const parts = slice.map(m => {
+  const parts = slice.map((m, i) => {
     const pm = PolymarketService.parseMarket(m);
     const p = Math.round(pm.yesPrice * 100);
-    const q = truncateStr(pm.question, 36).replace(/</g, '');
-    return `<span class="nav-tick-item"><strong>${p}%</strong> ${q}</span>`;
+    const q = truncateStr(pm.question, 52).replace(/</g, '');
+    const up = (pmHashStr(pm.slug + i) % 2) === 0;
+    const cls = up ? 'nav-tick-up' : 'nav-tick-down';
+    const arrow = up ? '▲' : '▼';
+    return `<span class="nav-tick-item"><span class="${cls}">${arrow} ${p}%</span> ${q}</span>`;
   });
   const track = parts.join('<span class="nav-tick-dot">·</span>');
   el.innerHTML = `<div class="nav-ticker-inner" aria-hidden="true"><div class="nav-ticker-track">${track}<span class="nav-tick-dot">·</span>${track}</div></div>`;
@@ -476,25 +537,17 @@ async function loadDashboard() {
     if (!acct) {
       activeEval = null;
       container.innerHTML = `
-        <div class="dash-grid">
-          <div class="dash-sidebar">
-            <div class="dc">
-              <div class="dc-label">Account</div>
-              <div class="badge badge-warn">NO ACTIVE EVALUATION</div>
-              <div class="dc-sub" style="margin-top:10px">You can browse live markets, but you can’t place bets until you start a challenge.</div>
-              <div style="margin-top:14px">
-                <button class="btn btn-primary" data-page="challenges" style="width:100%">View Challenges →</button>
-              </div>
+        <div class="dash-markets-only">
+          <div class="pm-eval-banner">
+            <div class="pm-eval-banner-text">
+              <strong>No active evaluation.</strong> Browse markets below — start a challenge to place bets from PolyEdge.
             </div>
+            <button type="button" class="btn btn-primary" data-page="challenges">View challenges</button>
           </div>
-          <div class="dash-main">
-            <div class="dash-markets-section">
-              ${marketsChromeHTML()}
-              <div class="dc-sub" style="margin-top:14px">To place a bet, start a challenge and come back to Markets.</div>
-            </div>
+          <div class="dash-markets-section dash-markets-section--wide">
+            ${marketsChromeHTML()}
           </div>
-        </div>
-      `;
+        </div>`;
       bindDataPage();
       loadLiveMarkets();
       return;
@@ -542,27 +595,29 @@ async function loadDashboard() {
     `<span class="badge badge-fail">${e.status.toUpperCase()}</span>`);
 
   container.innerHTML = `
-    <div class="dash-grid">
-      <div class="dash-sidebar">
-        <div class="dc"><div class="dc-label">Account</div>${statusBadge}<div class="progress-bar" style="margin-top:12px"><div class="progress-fill" style="width:${(daysUsed/daysTotal)*100}%"></div></div></div>
-        <div class="dc"><div class="dc-label">Balance</div><div class="dc-val">${fmt(e.balance)}</div><div class="dc-sub">Starting: ${fmt(e.starting_balance)}</div></div>
-        <div class="dc"><div class="dc-label">Profit Target</div><div class="dc-val ${profit>=0?'grn':'red'}">${fmt(Math.max(0,profit))} / ${fmt(profitTarget)}</div><div class="dc-sub">${e.profit_target_pct}% target</div><div class="progress-bar"><div class="progress-fill" style="width:${profitPct}%"></div></div></div>
-        <div class="dc"><div class="dc-label">Drawdown Used</div><div class="dc-val">${ddUsed.toFixed(1)}%</div><div class="dc-sub">Max: ${ddLimit}%</div><div class="progress-bar"><div class="progress-fill" style="width:${(ddUsed/ddLimit)*100}%;${ddUsed>ddLimit*0.7?'background:var(--red)':''}"></div></div></div>
-        <div class="dc"><div class="dc-label">Trades (Closed)</div><div class="dc-val">${closedTrades.length} / ${e.min_trades} min</div></div>
-        <div class="dc"><div class="dc-label">Consistency</div><div class="dc-val ${consistencyOk?'grn':'red'}">${consistencyOk?'✓ Passing':'✕ Failing'}</div><div class="dc-sub">Largest: ${largestPct.toFixed(1)}% (max ${e.consistency_rule_pct}%)</div></div>
+    <div class="dash-markets-page">
+      <div class="pm-eval-strip">
+        <div class="pm-eval-strip-inner">
+          <span class="pm-strip-badge">${statusBadge}</span>
+          <span class="pm-strip-item"><span class="pm-strip-l">Balance</span><strong>${fmt(e.balance)}</strong></span>
+          <span class="pm-strip-item"><span class="pm-strip-l">Day</span><strong>${daysUsed}/${daysTotal}</strong></span>
+          <span class="pm-strip-item"><span class="pm-strip-l">P&amp;L vs target</span><strong class="${profit>=0?'pgrn':'pred'}">${fmt(Math.max(0,profit))} / ${fmt(profitTarget)}</strong></span>
+          <span class="pm-strip-item"><span class="pm-strip-l">DD</span><strong>${ddUsed.toFixed(1)}%</strong></span>
+          <a href="#" class="pm-strip-link" data-page="dashboard">Full stats →</a>
+        </div>
       </div>
-      <div class="dash-main">
+      <div class="dash-trades-stack">
         <div class="dp">
           <div class="dp-header"><div class="dp-title">Open Positions</div><div style="display:flex;gap:8px"><span class="dp-badge">${openTrades.length} Active</span><button class="form-btn" style="width:auto;padding:6px 16px;font-size:10px" onclick="openModal('trade-modal')">+ New Trade</button></div></div>
-          ${openTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Commission</th><th>Action</th></tr></thead><tbody>${openTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${fmt(t.commission)}</td><td><button class="form-btn secondary" style="width:auto;padding:4px 12px;font-size:9px" onclick="openCloseModal('${t.id}','${t.contract_name}',${t.entry_price},'${t.side}',${t.trade_size})">Close</button></td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-family:var(--mono);font-size:12px">No open positions</p>'}
+          ${openTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Commission</th><th>Action</th></tr></thead><tbody>${openTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${fmt(t.commission)}</td><td><button class="form-btn secondary" style="width:auto;padding:4px 12px;font-size:9px" onclick="openCloseModal('${t.id}','${t.contract_name}',${t.entry_price},'${t.side}',${t.trade_size})">Close</button></td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-size:13px">No open positions</p>'}
         </div>
         <div class="dp">
           <div class="dp-header"><div class="dp-title">Trade History (Closed)</div><span class="dp-badge">${closedTrades.length} Closed</span></div>
-          ${closedTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Exit</th><th>P&L</th></tr></thead><tbody>${closedTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${(t.exit_price*100).toFixed(1)}¢</td><td class="${t.pnl>=0?'pgrn':'pred'}">${t.pnl>=0?'+':''}${fmt(t.pnl)}</td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-family:var(--mono);font-size:12px">No closed trades yet</p>'}
+          ${closedTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Exit</th><th>P&L</th></tr></thead><tbody>${closedTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${(t.exit_price*100).toFixed(1)}¢</td><td class="${t.pnl>=0?'pgrn':'pred'}">${t.pnl>=0?'+':''}${fmt(t.pnl)}</td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-size:13px">No closed trades yet</p>'}
         </div>
-        <div class="dash-markets-section">
-          ${marketsChromeHTML()}
-        </div>
+      </div>
+      <div class="dash-markets-section dash-markets-section--wide">
+        ${marketsChromeHTML()}
       </div>
     </div>`;
   bindDataPage();
@@ -638,18 +693,45 @@ function profitCalc() {
   const enEl = document.getElementById('pf-entry');
   const yEl = document.getElementById('pf-out-yes');
   const pEl = document.getElementById('pf-maxp');
+  const wrEl = document.getElementById('pf-winrate');
+  const rkEl = document.getElementById('pf-risk');
+  const sumEl = document.getElementById('pf-trader-summary');
   if (!szEl || !enEl || !yEl || !pEl) return;
   const sz = parseFloat(szEl.value) || 0;
   const entry = (parseFloat(enEl.value) || 0) / 100;
+  const winrate = wrEl ? (parseFloat(wrEl.value) || 50) / 100 : 0.5;
+  const risk = rkEl ? rkEl.value : 'med';
   if (entry <= 0 || entry >= 1 || sz <= 0) {
     yEl.textContent = '—';
     pEl.textContent = '—';
+    if (sumEl) sumEl.textContent = '';
     return;
   }
   const shares = sz / entry;
   const payoutIfYes = shares;
   yEl.textContent = payoutIfYes.toFixed(2);
   pEl.textContent = (payoutIfYes - sz).toFixed(2);
+
+  if (sumEl) {
+    const ev = winrate * (payoutIfYes - sz) - (1 - winrate) * sz;
+    const riskNote =
+      risk === 'low'
+        ? 'You skew conservative — size down and favor liquid markets.'
+        : risk === 'high'
+          ? 'Higher risk posture: keep position size small vs. bankroll and cap single-market exposure.'
+          : 'Balanced risk: split size across uncorrelated events.';
+    const edge =
+      ev > sz * 0.08
+        ? '<strong>Positive expected value</strong> if your win rate holds — keep sizing disciplined.'
+        : ev > 0
+          ? 'Edge looks thin — small edge, high variance.'
+          : '<strong>EV is negative</strong> at these inputs — you’d need a higher hit rate or cheaper entry.';
+    sumEl.innerHTML =
+      `<p><strong>Expected value (rough):</strong> ${ev >= 0 ? '+' : ''}$${ev.toFixed(2)} per trial <span style="color:var(--text3)">(ignores fees/slippage)</span>.</p>` +
+      `<p>${edge}</p>` +
+      `<p><strong>Profile:</strong> ${riskNote}</p>` +
+      '<p style="color:var(--text3);font-size:13px;margin-top:8px">This is educational math only, not financial advice. For “AI” depth you could later plug an API key into a small Edge function — here we use transparent heuristics.</p>';
+  }
 }
 
 function openMarketBet(marketName, side, price) {
@@ -1445,11 +1527,20 @@ function updateShellBackground(pageId) {
 }
 
 function showPage(id) {
+  let scrollEstimator = false;
+  if (id === 'profit') {
+    id = 'home';
+    scrollEstimator = true;
+  }
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
 
   const page = document.getElementById('page-' + id);
-  if (page) { page.classList.add('active'); window.scrollTo(0, 0); }
+  if (page) {
+    page.classList.add('active');
+    if (!scrollEstimator) window.scrollTo(0, 0);
+  }
 
   const link = document.querySelector(`.nav-links a[data-page="${id}"]`);
   if (link) link.classList.add('active');
@@ -1465,11 +1556,16 @@ function showPage(id) {
   if (id === 'certificate') loadCertificate();
   if (id === 'dashboard') loadPolyEdgeStats();
   if (id === 'settings') loadSettings();
-  if (id === 'profit') profitCalc();
 
   // Homepage animations
   if (id === 'home') {
     setTimeout(() => HomepageAnimations.init(), 100);
+    if (scrollEstimator) {
+      setTimeout(() => {
+        document.getElementById('home-estimator')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        profitCalc();
+      }, 160);
+    }
   }
 }
 
@@ -1496,6 +1592,7 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 // ==========================================
 document.addEventListener('DOMContentLoaded', async function() {
   bindDataPage();
+  setTimeout(() => profitCalc(), 0);
 
   const initialPage = document.querySelector('.page.active');
   const initialId = initialPage?.id?.replace(/^page-/, '') || 'home';
