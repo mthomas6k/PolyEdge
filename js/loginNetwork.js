@@ -4,6 +4,7 @@
   var ctx = null;
   var raf = 0;
   var nodes = [];
+  var dust = [];
   var running = false;
 
   // “Current events” style headlines (static set — reads live-ish without an API)
@@ -66,6 +67,22 @@
     canvas.style.height = h + 'px';
     if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     buildNodes(w, h);
+    buildDust(w, h);
+  }
+
+  function buildDust(w, h) {
+    dust = [];
+    var n = Math.min(56, Math.floor((w * h) / 22000));
+    for (var i = 0; i < n; i++) {
+      dust.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: rand(-0.18, 0.18),
+        vy: rand(-0.12, 0.12),
+        s: rand(0.35, 1.05),
+        a: rand(0.05, 0.16),
+      });
+    }
   }
 
   function loop() {
@@ -75,6 +92,20 @@
 
     ctx.fillStyle = '#04060a';
     ctx.fillRect(0, 0, w, h);
+
+    for (var di = 0; di < dust.length; di++) {
+      var d = dust[di];
+      d.x += d.vx;
+      d.y += d.vy;
+      if (d.x < -4) d.x = w + 4;
+      if (d.x > w + 4) d.x = -4;
+      if (d.y < -4) d.y = h + 4;
+      if (d.y > h + 4) d.y = -4;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.s, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(200, 230, 255, ' + d.a + ')';
+      ctx.fill();
+    }
 
     for (var i = 0; i < nodes.length; i++) {
       var a = nodes[i];
@@ -94,9 +125,9 @@
         var dy = nodes[i].y - nodes[j].y;
         var d = Math.sqrt(dx * dx + dy * dy);
         if (d < 140) {
-          var alpha = 0.22 * (1 - d / 140);
+          var alpha = 0.34 * (1 - d / 140);
           ctx.strokeStyle = 'rgba(100, 180, 255, ' + alpha + ')';
-          ctx.lineWidth = 1.65;
+          ctx.lineWidth = 2.45;
           ctx.beginPath();
           ctx.moveTo(nodes[i].x, nodes[i].y);
           ctx.lineTo(nodes[j].x, nodes[j].y);

@@ -88,11 +88,18 @@
         </div>
         <div class="form-group">
           <label class="form-label">Risk posture</label>
-          <select class="form-select" id="pf-risk" onchange="profitCalc()">
-            <option value="low">Conservative</option>
-            <option value="med" selected>Balanced</option>
-            <option value="high">Aggressive</option>
-          </select>
+          <input type="hidden" id="pf-risk" value="med">
+          <div class="estimator-dd" id="pf-risk-dd-root">
+            <button type="button" class="estimator-dd-btn" id="pf-risk-dd-btn" aria-haspopup="listbox" aria-expanded="false">
+              <span id="pf-risk-dd-label">Balanced</span>
+              <span class="est-dd-chev" aria-hidden="true">▾</span>
+            </button>
+            <div class="estimator-dd-menu" id="pf-risk-dd-menu" role="listbox" hidden>
+              <button type="button" class="estimator-dd-opt" data-risk="low" role="option">Conservative</button>
+              <button type="button" class="estimator-dd-opt" data-risk="med" role="option">Balanced</button>
+              <button type="button" class="estimator-dd-opt" data-risk="high" role="option">Aggressive</button>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Gross payout if Yes ($)</label>
@@ -125,10 +132,13 @@
       <div class="payment-marquee-viewport">
         <div class="payment-marquee-track">
           <div class="payment-marquee-set">
-            <span class="pay-chip">💳 Visa</span><span class="pay-chip">💳 Mastercard</span><span class="pay-chip">Apple Pay</span><span class="pay-chip">Google Pay</span><span class="pay-chip">PayPal</span><span class="pay-chip">Discover</span><span class="pay-chip">USDC</span>
+            <span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/visa.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Visa</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/mastercard.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Mastercard</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/applepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Apple Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Google Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/paypal.svg" alt="" width="20" height="20" loading="lazy" decoding="async">PayPal</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discover.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Discover</span><span class="pay-chip"><span class="pay-chip-badge pay-chip-badge--usdc" aria-hidden="true">$</span>USDC</span>
           </div>
           <div class="payment-marquee-set" aria-hidden="true">
-            <span class="pay-chip">💳 Visa</span><span class="pay-chip">💳 Mastercard</span><span class="pay-chip">Apple Pay</span><span class="pay-chip">Google Pay</span><span class="pay-chip">PayPal</span><span class="pay-chip">Discover</span><span class="pay-chip">USDC</span>
+            <span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/visa.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Visa</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/mastercard.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Mastercard</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/applepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Apple Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Google Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/paypal.svg" alt="" width="20" height="20" loading="lazy" decoding="async">PayPal</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discover.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Discover</span><span class="pay-chip"><span class="pay-chip-badge pay-chip-badge--usdc" aria-hidden="true">$</span>USDC</span>
+          </div>
+          <div class="payment-marquee-set" aria-hidden="true">
+            <span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/visa.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Visa</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/mastercard.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Mastercard</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/applepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Apple Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Google Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/paypal.svg" alt="" width="20" height="20" loading="lazy" decoding="async">PayPal</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discover.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Discover</span><span class="pay-chip"><span class="pay-chip-badge pay-chip-badge--usdc" aria-hidden="true">$</span>USDC</span>
           </div>
         </div>
       </div>
@@ -335,6 +345,24 @@
             <div class="ch-row"><span class="l">Max Drawdown</span><span class="v">6%</span></div>
             <div class="ch-row"><span class="l">Profit Split</span><span class="v">80/20</span></div>
             <button class="ch-btn" data-type="2step" data-size="2000" onclick="if(window.startChallenge){window.startChallenge('2step',2000);}else{alert('App script did not load. Open DevTools (F12) and check Console for errors.');} return false;">Start Challenge →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="payment-marquee-wrap payment-marquee-wrap--page" aria-hidden="true">
+      <div class="payment-marquee-fade payment-marquee-fade--l"></div>
+      <div class="payment-marquee-fade payment-marquee-fade--r"></div>
+      <div class="payment-marquee-viewport">
+        <div class="payment-marquee-track">
+          <div class="payment-marquee-set">
+            <span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/visa.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Visa</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/mastercard.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Mastercard</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/applepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Apple Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Google Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/paypal.svg" alt="" width="20" height="20" loading="lazy" decoding="async">PayPal</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discover.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Discover</span><span class="pay-chip"><span class="pay-chip-badge pay-chip-badge--usdc" aria-hidden="true">$</span>USDC</span>
+          </div>
+          <div class="payment-marquee-set" aria-hidden="true">
+            <span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/visa.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Visa</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/mastercard.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Mastercard</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/applepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Apple Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Google Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/paypal.svg" alt="" width="20" height="20" loading="lazy" decoding="async">PayPal</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discover.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Discover</span><span class="pay-chip"><span class="pay-chip-badge pay-chip-badge--usdc" aria-hidden="true">$</span>USDC</span>
+          </div>
+          <div class="payment-marquee-set" aria-hidden="true">
+            <span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/visa.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Visa</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/mastercard.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Mastercard</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/applepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Apple Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlepay.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Google Pay</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/paypal.svg" alt="" width="20" height="20" loading="lazy" decoding="async">PayPal</span><span class="pay-chip"><img class="pay-chip-img" src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/discover.svg" alt="" width="20" height="20" loading="lazy" decoding="async">Discover</span><span class="pay-chip"><span class="pay-chip-badge pay-chip-badge--usdc" aria-hidden="true">$</span>USDC</span>
           </div>
         </div>
       </div>
@@ -757,7 +785,7 @@
   <script src="js/loginNetwork.js"></script>
   <script src="js/homepageAnimations.js"></script>
   <script src="js/analytics.js?v=7"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/app.js?v=11"></script>
   <script src="js/terminalBg.js"></script>
 
 </body>

@@ -503,7 +503,7 @@ function updateNavTicker(markets) {
   const parts = slice.map((m, i) => {
     const pm = PolymarketService.parseMarket(m);
     const p = Math.round(pm.yesPrice * 100);
-    const q = truncateStr(pm.question, 52).replace(/</g, '');
+    const q = escHtml(pm.question || '—');
     const up = (pmHashStr(pm.slug + i) % 2) === 0;
     const cls = up ? 'nav-tick-up' : 'nav-tick-down';
     const arrow = up ? '▲' : '▼';
@@ -709,8 +709,8 @@ function profitCalc() {
   }
   const shares = sz / entry;
   const payoutIfYes = shares;
-  yEl.textContent = payoutIfYes.toFixed(2);
-  pEl.textContent = (payoutIfYes - sz).toFixed(2);
+  yEl.textContent = '$' + payoutIfYes.toFixed(2);
+  pEl.textContent = '$' + (payoutIfYes - sz).toFixed(2);
 
   if (sumEl) {
     const ev = winrate * (payoutIfYes - sz) - (1 - winrate) * sz;
@@ -730,7 +730,7 @@ function profitCalc() {
       `<p><strong>Expected value (rough):</strong> ${ev >= 0 ? '+' : ''}$${ev.toFixed(2)} per trial <span style="color:var(--text3)">(ignores fees/slippage)</span>.</p>` +
       `<p>${edge}</p>` +
       `<p><strong>Profile:</strong> ${riskNote}</p>` +
-      '<p style="color:var(--text3);font-size:13px;margin-top:8px">This is educational math only, not financial advice. For “AI” depth you could later plug an API key into a small Edge function — here we use transparent heuristics.</p>';
+      '<p style="color:var(--text3);font-size:13px;margin-top:8px">This is educational math only, not financial advice.</p>';
   }
 }
 
@@ -792,6 +792,55 @@ async function placeDashboardBet() {
 function truncateStr(s, n) {
   if (!s) return '—';
   return s.length > n ? s.slice(0, n) + '…' : s;
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function initRiskPostureDropdown() {
+  const hidden = document.getElementById('pf-risk');
+  const btn = document.getElementById('pf-risk-dd-btn');
+  const labelEl = document.getElementById('pf-risk-dd-label');
+  const menu = document.getElementById('pf-risk-dd-menu');
+  const root = document.getElementById('pf-risk-dd-root');
+  if (!hidden || !btn || !labelEl || !menu || !root) return;
+  const labels = { low: 'Conservative', med: 'Balanced', high: 'Aggressive' };
+  function close() {
+    menu.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  }
+  function open() {
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+  }
+  function sync() {
+    labelEl.textContent = labels[hidden.value] || 'Balanced';
+  }
+  sync();
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (menu.hidden) open();
+    else close();
+  });
+  menu.querySelectorAll('[data-risk]').forEach((opt) => {
+    opt.addEventListener('click', () => {
+      hidden.value = opt.getAttribute('data-risk') || 'med';
+      sync();
+      close();
+      profitCalc();
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if (!root.contains(e.target)) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
 }
 
 function fmt(n) { return '$' + Number(n || 0).toFixed(2); }
@@ -1592,6 +1641,7 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 // ==========================================
 document.addEventListener('DOMContentLoaded', async function() {
   bindDataPage();
+  initRiskPostureDropdown();
   setTimeout(() => profitCalc(), 0);
 
   const initialPage = document.querySelector('.page.active');
