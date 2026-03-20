@@ -705,15 +705,15 @@
 
       // ---- Dynamic glow driven by cursor position ----
       // No residual glow when cursor blink is OFF.
-      var sigmaFactor = 0.35; // distance falloff relative to hero width
-      var transition = 'text-shadow 0.16s ease';
+      var sigmaFactor = 0.55; // bigger radius so glow reaches title/buttons
+      var transition = 'text-shadow 0.12s ease';
 
       // Strength multipliers by element group.
-      // Edge is weaker because it's already blue.
-      var strengthEdge = 0.55;
-      var strengthTitle = 0.95;
-      var strengthMedium = 0.80;
-      var strengthButtons = 0.60;
+      // Edge is kept weaker than other white text areas.
+      var strengthEdge = 0.70;
+      var strengthTitle = 1.15;
+      var strengthMedium = 1.05;
+      var strengthButtons = 0.85;
 
       function rgba(r, g, b, a) {
         // Keep it short so this runs smoothly.
@@ -739,21 +739,19 @@
         var i = Math.max(0, Math.min(1, intensity || 0));
         var s = Math.max(0, strength || 0);
 
-        // Base alphas scale with intensity so glow brightens as cursor nears.
-        var a0 = Math.min(0.10, 0.06 * i * s);
-        var a1 = Math.min(0.30, 0.22 * i * s);
-        var a2 = Math.min(0.20, 0.11 * i * s);
+        // Scale alphas so glow is clearly visible on white hero text.
+        var a0 = Math.min(0.22, 0.14 * i * s);
+        var a1 = Math.min(0.55, 0.40 * i * s);
+        var a2 = Math.min(0.30, 0.20 * i * s);
 
         // side=-1 left, side=+1 right
-        var x1 = 8 * side;
-        var x2 = 2 * side;
+        var x1 = 10 * side;
+        var x2 = 3 * side;
 
-        // Layer 0 (very tight) makes the actual glyphs feel tinted.
-        // Remaining layers give the soft ambient reflection.
         return [
           '0px 0px 2px ' + rgba(pal.c0[0], pal.c0[1], pal.c0[2], a0),
-          x1 + 'px 12px 38px ' + rgba(pal.c1[0], pal.c1[1], pal.c1[2], a1),
-          x2 + 'px 6px 60px ' + rgba(pal.c2[0], pal.c2[1], pal.c2[2], a2)
+          x1 + 'px 12px 48px ' + rgba(pal.c1[0], pal.c1[1], pal.c1[2], a1),
+          x2 + 'px 6px 68px ' + rgba(pal.c2[0], pal.c2[1], pal.c2[2], a2)
         ].join(', ');
       }
 
@@ -768,23 +766,30 @@
       function computeHeroCenters() {
         if (!hero) return;
         heroRect = hero.getBoundingClientRect();
-        var sigma = Math.max(120, heroRect.width * sigmaFactor);
         // store centers so tick doesn't hammer layout every interval
-        if (edgeSpan) edgeCenterX = edgeSpan.getBoundingClientRect().left + edgeSpan.getBoundingClientRect().width / 2;
-        if (title) titleCenterX = title.getBoundingClientRect().left + title.getBoundingClientRect().width / 2;
+        if (edgeSpan) {
+          var er = edgeSpan.getBoundingClientRect();
+          edgeCenterX = er.left + er.width / 2;
+        }
+        if (title) {
+          var tr = title.getBoundingClientRect();
+          titleCenterX = tr.left + tr.width / 2;
+        }
 
         mediumCenters = [];
         for (var i = 0; i < mediumEls.length; i++) {
           var el = mediumEls[i];
           if (!el) continue;
-          mediumCenters.push({ el: el, cx: el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 });
+          var r = el.getBoundingClientRect();
+          mediumCenters.push({ el: el, cx: r.left + r.width / 2 });
         }
 
         weakCenters = [];
         for (var j = 0; j < weakEls.length; j++) {
           var w = weakEls[j];
           if (!w) continue;
-          weakCenters.push({ el: w, cx: w.getBoundingClientRect().left + w.getBoundingClientRect().width / 2 });
+          var wr = w.getBoundingClientRect();
+          weakCenters.push({ el: w, cx: wr.left + wr.width / 2 });
         }
       }
 
@@ -809,6 +814,9 @@
         // Recompute centers (hero layout can shift).
         computeHeroCenters();
       });
+
+      var lastCursorX = null;
+      var lastIsPoly = null;
 
       function tick() {
         var state = window.terminalState;
@@ -838,7 +846,10 @@
         function applyByCenter(cx, el, strength) {
           if (!el || cx == null) return;
           var dx = cursorX - cx;
-          var intensity = Math.exp(-(dx * dx) / (2 * sigma * sigma));
+          // Linear falloff so the glow reaches the whole hero more reliably.
+          var t = 1 - Math.min(1, Math.abs(dx) / sigma);
+          // Ease to bias towards brighter near the cursor.
+          var intensity = Math.pow(Math.max(0, t), 1.25);
           el.style.textShadow = makeShadow(pal, side, intensity, strength);
         }
 
@@ -859,7 +870,20 @@
 
       // Start immediately, then keep it synced with cursor blink.
       tick();
-      setInterval(tick, 80);
+      setInterval(function () {
+        // Light skip to reduce lag: if cursor hasn't moved and poly mode didn't change, skip.
+        var state = window.terminalState;
+        if (!state || !state.cursorOn) return tick();
+        var curEl = termHost.querySelector('#cur');
+        if (!curEl) return tick();
+        var curR = curEl.getBoundingClientRect();
+        var cursorX = curR.left + curR.width / 2;
+        var isPoly = !!state.isPolywog;
+        if (lastCursorX != null && Math.abs(cursorX - lastCursorX) < 3 && lastIsPoly === isPoly) return;
+        lastCursorX = cursorX;
+        lastIsPoly = isPoly;
+        tick();
+      }, 120);
     })();
   </script>
 
