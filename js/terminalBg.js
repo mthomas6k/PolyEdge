@@ -54,10 +54,12 @@ function glowTarget(cls) {
 
 function renderActive() {
   if (currentIsAi) {
+    activeLineEl.classList.add('term-ai-active');
     activeLineEl.style.textAlign = 'right';
     activeLineEl.innerHTML = esc(current) + '<span class="curai" id="cur"></span>';
     return;
   }
+  activeLineEl.classList.remove('term-ai-active');
   activeLineEl.style.textAlign = 'left';
   var base = classRGB[currentCls] || classRGB.mid;
   var gt = glowTarget(currentCls);

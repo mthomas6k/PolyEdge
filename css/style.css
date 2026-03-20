@@ -44,6 +44,8 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
 
 #terminal-bg-container #linesContainer{
   width:100%;
+  align-self:stretch;
+  min-width:0;
   text-align:left;
 }
 
@@ -86,7 +88,72 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
   position:relative;z-index:2;
   text-align:left;
   width:100%;
+  align-self:stretch;
+  min-width:0;
+  box-sizing:border-box;
 }
+
+/* AI typing line: match committed .ai alignment (no jump left after commit) */
+#terminal-bg-container #activeLine.term-ai-active{
+  text-align:right;
+  padding-right:10px;
+}
+
+#terminal-bg-container .ail{
+  display:block;
+  width:100%;
+  text-align:right;
+  white-space:pre-wrap;
+  word-break:break-all;
+  color:#5a6a7a;
+  opacity:0.55;
+  font-size:10px;
+  margin-bottom:3px;
+  min-height:17px;
+  box-sizing:border-box;
+  padding-right:10px;
+}
+
+#terminal-bg-container .ai{
+  display:block;
+  width:100%;
+  text-align:right;
+  white-space:pre-wrap;
+  word-break:break-all;
+  min-height:17px;
+  margin-bottom:1px;
+  color:#8a9aaa;
+  opacity:0.82;
+  box-sizing:border-box;
+  padding-right:10px;
+}
+
+#terminal-bg-container .curai{
+  display:inline-block;
+  width:7px;height:14px;
+  background:#e0e8f0;
+  margin-left:2px;
+  vertical-align:middle;
+  border-radius:1px;
+  box-shadow:
+    0 0 3px 1px rgba(200,220,240,0.9),
+    0 0 8px 4px rgba(160,190,220,0.6),
+    0 0 18px 8px rgba(120,160,200,0.35);
+  opacity:1;
+}
+
+/* Spacer used by script (class "sp") */
+#terminal-bg-container .sp{
+  display:block;
+  height:10px;
+}
+
+/* Short class names from terminal script */
+#terminal-bg-container .wh{color:#a8bcd4;opacity:0.82;}
+#terminal-bg-container .gr{color:#5a7a9a;opacity:0.6;}
+#terminal-bg-container .er{color:#c44a5a;opacity:0.75;}
+#terminal-bg-container .cm{color:#5a8ec8;opacity:1;text-shadow:0 0 8px rgba(80,140,220,0.5),0 0 18px rgba(60,120,200,0.25);}
+#terminal-bg-container .sl{color:#7aaad8;opacity:1;text-shadow:0 0 8px rgba(100,160,230,0.5),0 0 18px rgba(70,130,210,0.25);}
 
 #terminal-bg-container .cur{
   display:inline-block;
