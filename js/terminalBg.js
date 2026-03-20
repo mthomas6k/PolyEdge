@@ -84,9 +84,81 @@
     function renderActive(text, cls) {
       activeLine.className = cls || "mid";
       activeLine.style.textAlign = "left";
+
       const parts = wrapLineMobile(text, 45);
-      const safe = parts.map(escapeHtml).join("\n");
-      activeLine.innerHTML = safe + CUR_HTML;
+      const totalLen = parts.reduce((s, p) => s + String(p).length, 0);
+      if (totalLen === 0) {
+        activeLine.innerHTML = CUR_HTML;
+        return;
+      }
+
+      // Restore base class colors (used for far-field character tint).
+      const classRGB = {
+        dim: [42, 74, 122],
+        mid: [58, 106, 170],
+        bright: [106, 159, 216],
+        white: [168, 188, 212],
+        grey: [90, 122, 154],
+        err: [122, 58, 74],
+        ok: [58, 122, 90],
+        comment: [90, 142, 200],
+        slow: [122, 170, 216],
+      };
+
+      // Near-white glow target color (at cursor).
+      const GLOW_R = 220, GLOW_G = 238, GLOW_B = 255;
+
+      function lerpColor(r1, g1, b1, r2, g2, b2, t) {
+        return [
+          Math.round(r1 + (r2 - r1) * t),
+          Math.round(g1 + (g2 - g1) * t),
+          Math.round(b1 + (b2 - b1) * t),
+        ];
+      }
+
+      const base = classRGB[cls] || classRGB.mid;
+
+      // Wider, smoother spread.
+      const k = 0.018;
+      const power = 1.2;
+
+      let html = "";
+      let offset = 0;
+      for (let partIdx = 0; partIdx < parts.length; partIdx++) {
+        const part = String(parts[partIdx]);
+        const len = part.length;
+        for (let i = 0; i < len; i++) {
+          const dist = totalLen - (offset + i); // dist=1 is nearest to cursor
+          const t = 1 / (1 + Math.pow(dist, power) * k);
+
+          const [r, g, b] = lerpColor(
+            base[0], base[1], base[2],
+            GLOW_R, GLOW_G, GLOW_B,
+            t
+          );
+
+          // text-shadow where t is meaningful
+          let shadow = "";
+          if (t > 0.05) {
+            const s1 = (t * 1.1).toFixed(2);
+            const s2 = (t * 0.65).toFixed(2);
+            const s3 = (t * 0.35).toFixed(2);
+            shadow =
+              `text-shadow:0 0 3px rgba(180,220,255,${s1}),` +
+              `0 0 8px rgba(120,180,255,${s2}),` +
+              `0 0 16px rgba(80,140,255,${s3});`;
+          }
+
+          const ch = escapeHtml(part[i]);
+          html += `<span style="color:rgb(${r},${g},${b});${shadow}">${ch}</span>`;
+        }
+
+        offset += len;
+        if (partIdx !== parts.length - 1) html += "\n";
+      }
+
+      html += CUR_HTML;
+      activeLine.innerHTML = html;
     }
 
     function addLine(text, cls) {
