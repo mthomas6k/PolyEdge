@@ -7,7 +7,6 @@
   var drops = [];
   var fontSize = 14;
   var columns = 0;
-  var veil = null;
 
   var chars =
     'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789ABCDEFｦｧｨｩｪ';
@@ -65,15 +64,6 @@
     raf = requestAnimationFrame(draw);
   }
 
-  function ensureVeil() {
-    if (veil) return;
-    veil = document.createElement('div');
-    veil.id = 'matrix-bottom-veil';
-    veil.className = 'matrix-bottom-veil';
-    veil.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(veil);
-  }
-
   function ensureCanvas() {
     if (canvas) return;
     canvas = document.createElement('canvas');
@@ -83,7 +73,6 @@
       'position:fixed;left:0;top:0;width:100vw;height:100vh;max-width:100vw;max-height:100vh;z-index:1;pointer-events:none;display:none;';
     document.body.insertBefore(canvas, document.body.firstChild);
     ctx = canvas.getContext('2d', { alpha: true });
-    ensureVeil();
     resize();
     window.addEventListener('resize', resize);
   }
@@ -92,7 +81,6 @@
     enable: function () {
       ensureCanvas();
       canvas.style.display = 'block';
-      if (veil) veil.classList.add('is-on');
       if (!running) {
         running = true;
         resize();
@@ -106,7 +94,6 @@
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
       if (canvas) canvas.style.display = 'none';
-      if (veil) veil.classList.remove('is-on');
     },
   };
 })();

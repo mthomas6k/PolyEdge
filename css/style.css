@@ -244,7 +244,7 @@ nav{position:fixed;top:0;left:0;right:0;min-height:56px;background:rgba(4,6,10,0
 
 /* Translucent shell so blue matrix shows on non-home; cards stay opaque */
 .page{display:none;padding-top:56px;min-height:0;position:relative;z-index:2;background:rgba(4,6,10,0.78);padding-bottom:0}
-.page.active{display:block;animation:fadeIn 0.28s ease}
+.page.active{display:block;animation:fadeIn 0.28s ease;min-height:100vh;min-height:100dvh}
 body.has-nav-ticker .page{padding-top:88px}
 
 #page-home.page{background:var(--bg)}
@@ -264,11 +264,13 @@ body.has-nav-ticker .page{padding-top:88px}
 .payment-marquee-viewport{overflow:hidden;width:100%;max-width:none;margin:0;padding:0 clamp(16px,4vw,56px);box-sizing:border-box}
 .payment-marquee-track{display:flex;flex-direction:row;flex-wrap:nowrap;width:max-content;animation:payMarquee 48s linear infinite;will-change:transform}
 @keyframes payMarquee{0%{transform:translateX(0)}100%{transform:translateX(calc(-100% / 3))}}
-.payment-marquee-set{display:flex;align-items:center;gap:14px;padding-right:40px;flex-shrink:0;flex-grow:0}
+.payment-marquee-set{display:flex;align-items:center;gap:18px;padding-right:48px;flex-shrink:0;flex-grow:0}
 .pay-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;font-family:var(--sans);font-size:13px;font-weight:600;color:#e8eef8;white-space:nowrap}
-.pay-chip-img{width:20px;height:20px;flex-shrink:0;display:block;object-fit:contain;opacity:0.95}
+.pay-chip--icononly{padding:12px 14px;gap:0}
+.pay-chip-img{width:40px;height:40px;flex-shrink:0;display:block;object-fit:contain}
 .pay-chip-badge{width:20px;height:20px;flex-shrink:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;font-family:var(--sans);letter-spacing:-0.04em;line-height:1}
 .pay-chip-badge--usdc{background:linear-gradient(145deg,#2775ca,#0d3d9e);box-shadow:0 0 0 1px rgba(255,255,255,0.14) inset}
+.pay-chip-badge--lrg{width:40px;height:40px;font-size:16px}
 .payment-marquee-fade{position:absolute;top:0;bottom:0;width:72px;z-index:2;pointer-events:none}
 .payment-marquee-fade--l{left:0;background:linear-gradient(90deg,var(--bg2),transparent)}
 .payment-marquee-fade--r{right:0;background:linear-gradient(270deg,var(--bg2),transparent)}
@@ -327,7 +329,7 @@ body.has-nav-ticker .page{padding-top:88px}
 .step.in-view:nth-child(2){animation-delay:0.1s}
 .step.in-view:nth-child(3){animation-delay:0.2s}
 
-footer{border-top:1px solid var(--border);padding:32px 24px 28px;text-align:center;font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.02em;color:rgba(220,230,245,0.55);text-transform:none}
+footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:center;font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.02em;color:rgba(220,230,245,0.55);text-transform:none;background:inherit}
 
 /* Challenge cards */
 .challenge-toggle{display:flex;justify-content:center;margin-bottom:40px}
@@ -755,9 +757,6 @@ footer{border-top:1px solid var(--border);padding:32px 24px 28px;text-align:cent
 .estimator-dd-menu{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:6px;box-shadow:0 16px 48px rgba(0,0,0,0.45)}
 .estimator-dd-opt{display:block;width:100%;padding:10px 12px;border:none;border-radius:8px;background:transparent;color:var(--text2);font-family:var(--sans);font-size:13px;font-weight:600;text-align:left;cursor:pointer;transition:background 0.15s,color 0.15s}
 .estimator-dd-opt:hover{background:var(--bg3);color:#fff}
-/* Sits above .page (z-index 2) so the gradient actually darkens the translucent shell over the matrix at the bottom; pointer-events none keeps clicks usable. */
-.matrix-bottom-veil{position:fixed;left:0;right:0;bottom:0;height:min(68vh,620px);z-index:2;pointer-events:none;display:none;background:linear-gradient(to top,rgba(4,6,10,0.97) 0%,rgba(4,6,10,0.92) 14%,rgba(4,6,10,0.78) 32%,rgba(4,6,10,0.42) 58%,rgba(4,6,10,0.12) 82%,transparent 100%)}
-.matrix-bottom-veil.is-on{display:block}
 .estimator-lead{color:var(--text2);font-size:15px;margin-bottom:24px;line-height:1.6;max-width:720px}
 .estimator-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:20px}
 @media(max-width:900px){.estimator-grid{grid-template-columns:1fr 1fr}}
