@@ -1311,6 +1311,236 @@ async function saveSettings() {
 // ==========================================
 // POLYEDGE INTERNAL STATS (Supabase-only)
 // ==========================================
+/** Weekly endpoints of cumulative P&L (Monday buckets) — mirrors wallet analytics */
+function buildEvalWeeklyCumPoints(cumPnl) {
+  if (!cumPnl || !cumPnl.length) return [];
+  function mondayKeyFromDateStr(dateStr) {
+    const ms = new Date(dateStr + 'T12:00:00').getTime();
+    const d = new Date(ms);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const m = new Date(d);
+    m.setDate(diff);
+    m.setHours(0, 0, 0, 0);
+    return m.toISOString().slice(0, 10);
+  }
+  const groups = new Map();
+  cumPnl.forEach(pt => {
+    const k = mondayKeyFromDateStr(pt.date);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(pt);
+  });
+  const keys = [...groups.keys()].sort();
+  return keys.map(k => {
+    const pts = groups.get(k);
+    const last = pts[pts.length - 1];
+    return { date: last.date, pnl: last.pnl };
+  });
+}
+
+function dashYAxisLabel(v) {
+  if (typeof yAxisLabel === 'function') return yAxisLabel(v);
+  if (v > 0) return '+' + '$' + Math.abs(v).toFixed(0);
+  if (v < 0) return '\u2212$' + Math.abs(v).toFixed(0);
+  return '$0';
+}
+
+function dashFormatSigned(n) {
+  if (typeof formatSignedUsd === 'function') return formatSignedUsd(n);
+  const x = Number(n) || 0;
+  const a = Math.abs(x).toFixed(2);
+  if (x > 0) return '+' + '$' + a;
+  if (x < 0) return '\u2212$' + a;
+  return '$' + a;
+}
+
+let statsPnlDialAnim = null;
+function setStatsPnlDialValue(pnl, dateStr) {
+  const valEl = document.getElementById('stats-pnl-dial-value');
+  const dateEl = document.getElementById('stats-pnl-dial-date');
+  if (!valEl) return;
+  const target = Number(pnl) || 0;
+  const start = statsPnlDialAnim ? statsPnlDialAnim.current : target;
+  if (statsPnlDialAnim) cancelAnimationFrame(statsPnlDialAnim.raf);
+  const t0 = performance.now();
+  const dur = 180;
+  function tick(now) {
+    const t = Math.min(1, (now - t0) / dur);
+    const ease = 1 - (1 - t) * (1 - t);
+    const cur = start + (target - start) * ease;
+    statsPnlDialAnim = { current: cur, raf: null };
+    valEl.textContent = dashFormatSigned(cur);
+    valEl.style.color = cur >= 0 ? 'var(--green)' : 'var(--red)';
+    if (dateEl) dateEl.textContent = dateStr || '';
+    if (t < 1) statsPnlDialAnim.raf = requestAnimationFrame(tick);
+  }
+  statsPnlDialAnim = { current: start, raf: requestAnimationFrame(tick) };
+}
+
+function dashPnlSeries() {
+  const d = window.__DASH_PNL_DATA__;
+  if (!d || !d.daily || !d.daily.length) return [];
+  const mode = window.__DASH_PNL_MODE__ || 'day';
+  if (mode === 'week' && d.weekly && d.weekly.length) return d.weekly;
+  return d.daily;
+}
+
+window.dashSetPnlMode = function (mode) {
+  window.__DASH_PNL_MODE__ = mode;
+  document.querySelectorAll('.pe-dash-pnl-tab').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+  });
+  initDashboardPnlChart();
+};
+
+function initDashboardPnlChart() {
+  const canvas = document.getElementById('stats-pnl-chart');
+  if (!canvas || !window.__DASH_PNL_DATA__) return;
+  const pad = { t: 22, r: 18, b: 40, l: 58 };
+  const CH = 240;
+  let hoverI = 0;
+
+  function drawFrame() {
+    const series = dashPnlSeries();
+    if (!series.length) return;
+    if (hoverI >= series.length) hoverI = series.length - 1;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.parentElement.offsetWidth || canvas.offsetWidth || 600;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = CH * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = CH + 'px';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    const vals = series.map(d => d.pnl);
+    const labels = series.map(d => (d.date || '').slice(5));
+    const min = Math.min(...vals, 0);
+    const max = Math.max(...vals, 0);
+    const range = max - min || 1;
+    const w = W - pad.l - pad.r;
+    const h = CH - pad.t - pad.b;
+    const toX = i => pad.l + (vals.length > 1 ? (i / (vals.length - 1)) * w : w / 2);
+    const toY = v => pad.t + (1 - (v - min) / range) * h;
+
+    ctx.fillStyle = 'rgba(12,18,32,0.55)';
+    ctx.fillRect(0, 0, W, CH);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    for (let g = 0; g <= 4; g++) {
+      const yy = pad.t + (g / 4) * h;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, yy);
+      ctx.lineTo(pad.l + w, yy);
+      ctx.stroke();
+    }
+
+    ctx.setLineDash([4, 6]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    const zeroY = toY(0);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, zeroY);
+    ctx.lineTo(pad.l + w, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.font = '11px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(230,238,255,0.85)';
+    ctx.textAlign = 'right';
+    [max, (min + max) / 2, min].forEach(v => {
+      ctx.fillText(dashYAxisLabel(v), pad.l - 8, toY(v) + 4);
+    });
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(180,195,220,0.7)';
+    const step = Math.max(1, Math.floor(labels.length / 7));
+    for (let i = 0; i < labels.length; i += step) {
+      ctx.fillText(labels[i], toX(i), CH - 10);
+    }
+
+    for (let i = 1; i < vals.length; i++) {
+      const up = vals[i] >= vals[i - 1];
+      const g = ctx.createLinearGradient(toX(i - 1), toY(vals[i - 1]), toX(i), toY(vals[i]));
+      if (up) {
+        g.addColorStop(0, 'rgba(61,214,138,0.4)');
+        g.addColorStop(1, 'rgba(61,214,138,0.06)');
+      } else {
+        g.addColorStop(0, 'rgba(248,113,113,0.4)');
+        g.addColorStop(1, 'rgba(248,113,113,0.06)');
+      }
+      ctx.beginPath();
+      ctx.moveTo(toX(i - 1), toY(vals[i - 1]));
+      ctx.lineTo(toX(i), toY(vals[i]));
+      ctx.lineTo(toX(i), pad.t + h);
+      ctx.lineTo(toX(i - 1), pad.t + h);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+
+    for (let i = 1; i < vals.length; i++) {
+      const up = vals[i] >= vals[i - 1];
+      ctx.beginPath();
+      ctx.moveTo(toX(i - 1), toY(vals[i - 1]));
+      ctx.lineTo(toX(i), toY(vals[i]));
+      ctx.strokeStyle = up ? '#3dd68a' : '#f87171';
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    const hx = toX(hoverI);
+    ctx.strokeStyle = 'rgba(96,165,250,0.75)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(hx, pad.t);
+    ctx.lineTo(hx, pad.t + h);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(hx, toY(vals[hoverI]), 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#93c5fd';
+    ctx.fill();
+
+    setStatsPnlDialValue(series[hoverI].pnl, series[hoverI].date);
+  }
+
+  hoverI = Math.max(0, dashPnlSeries().length - 1);
+  drawFrame();
+
+  if (canvas._dashPnlMove) {
+    canvas.removeEventListener('mousemove', canvas._dashPnlMove);
+    canvas.removeEventListener('mouseleave', canvas._dashPnlLeave);
+  }
+  canvas._dashPnlMove = e => {
+    const series = dashPnlSeries();
+    if (!series.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const W = rect.width;
+    const vals = series.map(d => d.pnl);
+    const w = W - pad.l - pad.r;
+    const t = Math.max(0, Math.min(1, (x - pad.l) / Math.max(w, 1)));
+    hoverI = vals.length <= 1 ? 0 : Math.round(t * (vals.length - 1));
+    drawFrame();
+  };
+  canvas._dashPnlLeave = () => {
+    const series = dashPnlSeries();
+    hoverI = Math.max(0, series.length - 1);
+    drawFrame();
+  };
+  canvas.addEventListener('mousemove', canvas._dashPnlMove);
+  canvas.addEventListener('mouseleave', canvas._dashPnlLeave);
+
+  if (!window._dashPnlResizeBound) {
+    window._dashPnlResizeBound = true;
+    window.addEventListener('resize', () => {
+      if (document.getElementById('stats-pnl-chart') && window.__DASH_PNL_DATA__) initDashboardPnlChart();
+    });
+  }
+}
+
 async function loadPolyEdgeStats() {
   const container = document.getElementById('stats-content');
   if (!container) return;
@@ -1406,15 +1636,25 @@ async function loadPolyEdgeStats() {
       </div>
 
       <div class="an-grid">
-        <div class="an-card an-card-wide">
-          <div class="an-card-header">
-            <span class="an-card-title">Cumulative P&L</span>
-            <div class="an-chart-legend">
-              <span class="an-leg-dot" style="background:var(--accent)"></span>
-              <span>Closed-trade P&L over time</span>
+        <div class="an-card an-card-wide pe-card-r pe-grad-card">
+          <div class="an-card-header pe-card-head">
+            <div>
+              <span class="pe-card-kicker">Evaluation</span>
+              <span class="an-card-title pe-card-title">Cumulative P&amp;L path</span>
+            </div>
+            <div class="pe-seg pe-pnl-tabs">
+              <button type="button" class="pe-seg-btn pe-dash-pnl-tab active" data-mode="day" onclick="dashSetPnlMode('day')">Daily</button>
+              <button type="button" class="pe-seg-btn pe-dash-pnl-tab" data-mode="week" onclick="dashSetPnlMode('week')">Weekly</button>
+              <button type="button" class="pe-seg-btn pe-dash-pnl-tab" data-mode="all" onclick="dashSetPnlMode('all')">All time</button>
             </div>
           </div>
-          ${cumPnl.length ? '<div class="an-chart-wrap"><canvas id="stats-pnl-chart"></canvas></div>' : '<div class="an-empty-chart">No closed trades yet</div>'}
+          <div class="pe-pnl-dial">
+            <div class="pe-pnl-dial-label">Cumulative (hover chart)</div>
+            <div id="stats-pnl-dial-value" class="pe-pnl-dial-val pe-tab-nums">${cumPnl.length ? dashFormatSigned(cumPnl[cumPnl.length - 1].pnl) : '—'}</div>
+            <div id="stats-pnl-dial-date" class="pe-pnl-dial-date">${cumPnl.length ? cumPnl[cumPnl.length - 1].date : ''}</div>
+          </div>
+          ${cumPnl.length ? '<div class="an-chart-wrap an-chart-interactive pe-chart-shade"><canvas id="stats-pnl-chart"></canvas></div>' : '<div class="an-empty-chart">No closed trades yet</div>'}
+          <p class="pe-fineprint">Built from closed-trade P&amp;L by day. Green / red segments = up / down vs previous point.</p>
         </div>
 
         <div class="an-card">
@@ -1449,7 +1689,11 @@ async function loadPolyEdgeStats() {
     `;
 
     if (cumPnl.length) {
-      requestAnimationFrame(() => drawStatsPnlChart(cumPnl));
+      window.__DASH_PNL_DATA__ = { daily: cumPnl, weekly: buildEvalWeeklyCumPoints(cumPnl) };
+      window.__DASH_PNL_MODE__ = 'day';
+      requestAnimationFrame(() => initDashboardPnlChart());
+    } else {
+      window.__DASH_PNL_DATA__ = null;
     }
 
     await (async () => {
@@ -1469,87 +1713,6 @@ async function loadPolyEdgeStats() {
     console.error('loadPolyEdgeStats failed:', e);
     container.innerHTML = '<div class="an-center"><div class="an-error-box"><h3>Failed to Load Stats</h3><p>' + (e.message || 'Unknown error') + '</p></div></div>';
   }
-}
-
-function drawStatsPnlChart(cumPnl) {
-  const canvas = document.getElementById('stats-pnl-chart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.parentElement.offsetWidth || canvas.offsetWidth || 600;
-  const H = 200;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.scale(dpr, dpr);
-
-  const vals = cumPnl.map(d => d.pnl);
-  const labels = cumPnl.map(d => d.date.slice(5));
-  const min = Math.min(...vals, 0);
-  const max = Math.max(...vals, 0);
-  const range = max - min || 1;
-  const pad = { t: 20, r: 20, b: 36, l: 56 };
-  const w = W - pad.l - pad.r;
-  const h = H - pad.t - pad.b;
-
-  const toX = (i) => pad.l + (vals.length > 1 ? (i / (vals.length - 1)) * w : w / 2);
-  const toY = (v) => pad.t + (1 - (v - min) / range) * h;
-
-  ctx.setLineDash([3, 4]);
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 1;
-  const zeroY = toY(0);
-  ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(pad.l + w, zeroY); ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.font = "10px 'JetBrains Mono', monospace";
-  ctx.fillStyle = '#4a5878';
-  ctx.textAlign = 'right';
-  [min, (min + max) / 2, max].forEach(v => {
-    ctx.fillText((v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(0), pad.l - 6, toY(v) + 4);
-  });
-
-  ctx.textAlign = 'center';
-  const step = Math.max(1, Math.floor(labels.length / 6));
-  for (let i = 0; i < labels.length; i += step) {
-    ctx.fillText(labels[i], toX(i), H - 8);
-  }
-
-  const lastVal = vals[vals.length - 1] || 0;
-  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + h);
-  if (lastVal >= 0) {
-    grad.addColorStop(0, 'rgba(64,176,128,0.25)');
-    grad.addColorStop(1, 'rgba(64,176,128,0.01)');
-  } else {
-    grad.addColorStop(0, 'rgba(208,72,72,0.01)');
-    grad.addColorStop(1, 'rgba(208,72,72,0.25)');
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(toX(0), toY(vals[0]));
-  vals.forEach((v, i) => { if (i > 0) ctx.lineTo(toX(i), toY(v)); });
-  ctx.lineTo(toX(vals.length - 1), pad.t + h);
-  ctx.lineTo(toX(0), pad.t + h);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  const lineColor = lastVal >= 0 ? '#40b080' : '#d04848';
-  ctx.beginPath();
-  ctx.moveTo(toX(0), toY(vals[0]));
-  vals.forEach((v, i) => { if (i > 0) ctx.lineTo(toX(i), toY(v)); });
-  ctx.strokeStyle = lineColor;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  ctx.stroke();
-
-  const lastX = toX(vals.length - 1);
-  const lastY = toY(lastVal);
-  ctx.beginPath();
-  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
-  ctx.fillStyle = lineColor;
-  ctx.fill();
 }
 
 // ==========================================

@@ -7,11 +7,18 @@ const CalendarComponent = (() => {
   let currentMonth = new Date().getMonth();
   let currentYear = new Date().getFullYear();
   let closedTrades = [];
+  /** @type {{ date: string, pnl: number }[]} — Polymarket wallet: net activity P&amp;L by day */
+  let walletDailyRows = [];
   /** @type {{ at: string, label: string, kind?: string }[]} */
   let milestones = [];
 
   function setTrades(trades) {
     closedTrades = (trades || []).filter(t => t.status === 'closed' && t.closed_at);
+  }
+
+  /** When set, calendar uses on-chain daily net instead of evaluation trades */
+  function setWalletDaily(rows) {
+    walletDailyRows = Array.isArray(rows) ? rows.filter(r => r && r.date) : [];
   }
 
   function setMilestones(list) {
@@ -24,15 +31,28 @@ const CalendarComponent = (() => {
     const dailyPnl = {};
     const dailyTrades = {};
 
-    closedTrades.forEach(t => {
-      const d = new Date(t.closed_at);
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const day = d.getDate();
-        if (!dailyPnl[day]) { dailyPnl[day] = 0; dailyTrades[day] = []; }
-        dailyPnl[day] += parseFloat(t.pnl || 0);
-        dailyTrades[day].push(t);
-      }
-    });
+    if (walletDailyRows.length) {
+      walletDailyRows.forEach(row => {
+        const d = new Date(row.date + 'T12:00:00');
+        if (d.getFullYear() === year && d.getMonth() === month) {
+          const day = d.getDate();
+          const amt = parseFloat(row.pnl || 0);
+          if (!dailyPnl[day]) { dailyPnl[day] = 0; dailyTrades[day] = []; }
+          dailyPnl[day] += amt;
+          dailyTrades[day].push({ contract_name: 'On-chain net flow', side: '—', pnl: amt, walletDay: true });
+        }
+      });
+    } else {
+      closedTrades.forEach(t => {
+        const d = new Date(t.closed_at);
+        if (d.getFullYear() === year && d.getMonth() === month) {
+          const day = d.getDate();
+          if (!dailyPnl[day]) { dailyPnl[day] = 0; dailyTrades[day] = []; }
+          dailyPnl[day] += parseFloat(t.pnl || 0);
+          dailyTrades[day].push(t);
+        }
+      });
+    }
 
     const totalPnl = Object.values(dailyPnl).reduce((s, v) => s + v, 0);
     const tradingDays = Object.keys(dailyPnl).length;
@@ -99,10 +119,12 @@ const CalendarComponent = (() => {
         </div>`;
     }
 
+    const calTitle = walletDailyRows.length ? 'On-chain activity calendar' : 'Evaluation P&amp;L calendar';
+
     container.innerHTML = `
       <div class="cal-card an-card an-card-full cal-card-rounded" style="margin-top:20px">
         <div class="cal-header">
-          <span class="an-card-title">Calendar</span>
+          <span class="an-card-title">${calTitle}</span>
           <div class="cal-nav">
             <button class="cal-nav-btn" onclick="CalendarComponent.prevMonth('${containerId}')">‹</button>
             <span class="cal-month-label">${monthNames[currentMonth]} ${currentYear}</span>
@@ -158,9 +180,13 @@ const CalendarComponent = (() => {
         </div>
         ${msBlock}
         <table class="tbl">
-          <thead><tr><th>Contract</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L</th></tr></thead>
+          <thead><tr>${trades[0] && trades[0].walletDay ? '<th>Source</th><th>P&amp;L</th>' : '<th>Contract</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L</th>'}</tr></thead>
           <tbody>
-            ${trades.map(t => `
+            ${trades.map(t => t.walletDay ? `
+              <tr>
+                <td>${t.contract_name || '—'}</td>
+                <td class="${t.pnl >= 0 ? 'pgrn' : 'pred'}">${t.pnl >= 0 ? '+' : ''}$${Number(t.pnl).toFixed(2)}</td>
+              </tr>` : `
               <tr>
                 <td>${t.contract_name || '—'}</td>
                 <td>${t.side}</td>
@@ -187,5 +213,5 @@ const CalendarComponent = (() => {
     render(containerId);
   }
 
-  return { setTrades, setMilestones, render, showDayDetail, prevMonth, nextMonth };
+  return { setTrades, setWalletDaily, setMilestones, render, showDayDetail, prevMonth, nextMonth };
 })();
