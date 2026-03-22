@@ -421,7 +421,7 @@
     <footer>© 2025 PolyEdge — All Rights Reserved</footer>
   </div>
 
-  <!-- ========== WALLET (Polymarket portfolio analytics) ========== -->
+  <!-- ========== WALLET (Polymarket on-chain portfolio) ========== -->
   <div id="page-wallet" class="page">
     <div id="analytics-content">
       <!-- Rendered by analytics.js -->
@@ -743,6 +743,15 @@
     </div>
   </div>
 
+  <!-- Mobile: fixed strip; shows while scrolling, fades after idle (covers matrix at bottom) -->
+  <div id="mobile-nav-slip" class="mobile-nav-slip" aria-label="Quick navigation">
+    <a href="#" data-page="home" class="mobile-nav-slip__link">Home</a>
+    <a href="#" data-page="challenges" class="mobile-nav-slip__link">Challenges</a>
+    <a href="#" data-page="markets" class="auth-only mobile-nav-slip__link">Markets</a>
+    <a href="#" data-page="dashboard" class="auth-only mobile-nav-slip__link">Dash</a>
+    <a href="#" data-page="wallet" class="auth-only mobile-nav-slip__link">Wallet</a>
+  </div>
+
   <!-- ========== BOTTOM NAVIGATION ========== -->
   <div class="bottom-nav" id="bottom-nav">
     <div class="bottom-nav-inner">
@@ -784,7 +793,7 @@
   <script src="js/matrixRain.js"></script>
   <script src="js/loginNetwork.js"></script>
   <script src="js/homepageAnimations.js"></script>
-  <script src="js/analytics.js?v=7"></script>
+  <script src="js/analytics.js?v=8"></script>
   <script src="js/app.js?v=11"></script>
   <script src="js/terminalBg.js"></script>
 

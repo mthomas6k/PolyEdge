@@ -210,7 +210,7 @@ async function() {
 },
 
 async function() {
-  await burst(['const kelly = (edge, odds) => {','  if (edge <= 0) return 0;','  return (edge * odds - (1 - edge)) / odds;','};'],'bright');
+  await burst(['const kelly = (pWin, odds) => {','  if (pWin <= 0) return 0;','  return (pWin * odds - (1 - pWin)) / odds;','};'],'bright');
   await pause(rnd(400,1000));
 },
 
@@ -230,7 +230,7 @@ async function() {
 },
 
 async function() {
-  await burst(['const pipeline = [','  fetchMarkets,','  filterByVolume(50000),','  filterByLiquidity(10000),','  calcEdgeForAll,','  rankByKelly,','  slice(0, 20),','];','const results = await runPipeline(pipeline);'],'bright');
+  await burst(['const pipeline = [','  fetchMarkets,','  filterByVolume(50000),','  filterByLiquidity(10000),','  scoreMispricingForAll,','  rankByKelly,','  slice(0, 20),','];','const results = await runPipeline(pipeline);'],'bright');
   await pause(rnd(600,1400));
 },
 
@@ -422,7 +422,7 @@ async function() {
 },
 
 async function() {
-  var q = pick(['trump tariffs','fed rate cut','bitcoin etf','election 2026','crypto regulation','sp500 recession','china trade deal']);
+  var q = pick(['trump tariffs','fed rate cut','bitcoin etf','general election','crypto regulation','sp500 recession','china trade deal']);
   await typeLine('node search.js --query="'+q+'" --limit=5','wh',10,25,70,170);
   await pause(rnd(200,500));
   await burst(['> found '+rnd(12,340)+' markets for "'+q+'"','> top: YES '+rnd(20,80)+'c  |  NO '+rnd(20,80)+'c','> volume: $'+rnd(10,900)+'k'],'gr');
@@ -433,7 +433,7 @@ async function() {
   var mkt = pick(['will-fed-cut-june','btc-100k-july','trump-approval-50','sp500-q2-correction']);
   await typeLine('node stream.js --market="'+mkt+'" --live','wh',9,22,70,160);
   await pause(rnd(300,600));
-  await ultraFast(['[ws] connected','[ws] subscribing: '+mkt,'[ws] price_update YES '+rnd(25,75)+'c -> '+rnd(25,75)+'c','[ws] trade       YES '+rnd(100,2000)+' shares','[ws] alert: edge signal triggered'],'gr');
+  await ultraFast(['[ws] connected','[ws] subscribing: '+mkt,'[ws] price_update YES '+rnd(25,75)+'c -> '+rnd(25,75)+'c','[ws] trade       YES '+rnd(100,2000)+' shares','[ws] alert: price band breach'],'gr');
   await typeLine('// interesting. flagging this one.','cm',32,85,150,400);
   await pause(rnd(1000,2500));
 },
@@ -600,6 +600,76 @@ async function() {
   await pause(rnd(800,1800));
 },
 
+async function() {
+  await typeLine('docker ps --format "table {{.Names}}\t{{.Status}}"','wh',8,20,70,160);
+  await pause(rnd(250,600));
+  await burst(['NAMES        STATUS','api-1        Up '+rnd(2,48)+' hours','worker-1     Up '+rnd(2,48)+' hours','redis-1      Up '+rnd(2,14)+' days'],'gr');
+  await pause(rnd(800,1700));
+},
+
+async function() {
+  await typeLine('curl -s localhost:8080/health | jq .','wh',8,22,70,170);
+  await pause(rnd(300,700));
+  await burst(['{','  "status": "ok",','  "db": "connected",','  "queue_depth": '+rnd(0,120),'}'],'ok');
+  await pause(rnd(900,1900));
+},
+
+async function() {
+  await typeLine('npm outdated --json | head -c 200','wh',8,20,70,160);
+  await pause(rnd(300,700));
+  await burst(['{','  "lodash": { "current": "4.17.20", "wanted": "4.17.21" },','  "axios": { "current": "1.6.0", "wanted": "1.6.2" }','}'],'dim');
+  await pause(rnd(700,1500));
+},
+
+async function() {
+  await typeLine('psql $DATABASE_URL -c "SELECT COUNT(*) FROM positions WHERE status = \'open\';"','wh',6,18,70,170);
+  await pause(rnd(400,900));
+  await burst([' count ','-------','  '+rnd(120,8900),'(1 row)'],'gr');
+  await pause(rnd(800,1700));
+},
+
+async function() {
+  await typeLine('wc -l src/**/*.ts | tail -1','wh',8,22,70,160);
+  await pause(rnd(250,600));
+  await burst(['  '+rnd(8000,28000)+' total'],'dim');
+  await typeLine('// that is a lot of lines','cm',32,85,150,400);
+  await pause(rnd(900,1800));
+},
+
+async function() {
+  await typeLine('node scripts/backup.js --dry-run','wh',9,22,70,170);
+  await pause(rnd(300,700));
+  await burst(['[backup] scanning tables...','[backup] evaluations: '+rnd(400,9000)+' rows','[backup] trades: '+rnd(2000,40000)+' rows','[backup] dry run complete. no files written.'],'dim');
+  await pause(rnd(1000,2200));
+},
+
+async function() {
+  await typeLine('openssl rand -hex 16','wh',10,25,70,160);
+  await pause(rnd(200,500));
+  var h = '';
+  for (var hi = 0; hi < 32; hi++) h += '0123456789abcdef'[rnd(0, 15)];
+  await burst([h],'gr');
+  await pause(rnd(600,1400));
+},
+
+async function() {
+  await typeLine('node latency.js --url=https://api.example.com/v1/ping --n=50','wh',7,18,70,170);
+  await pause(rnd(400,900));
+  await burst(['samples: 50','p50: '+rnd(18,95)+'ms','p95: '+rnd(120,340)+'ms','p99: '+rnd(200,520)+'ms','max: '+rnd(300,900)+'ms'],'gr');
+  await pause(rnd(900,1900));
+},
+
+async function() {
+  await typeLine('eslint src/ --max-warnings=0','wh',8,20,70,160);
+  await pause(rnd(400,900));
+  await burst(['  2 problems (2 errors, 0 warnings)'],'er');
+  await pause(rnd(500,1000));
+  await typeLine('eslint src/ --fix','wh',8,20,70,160);
+  await pause(rnd(400,900));
+  await burst(['  0 problems'],'ok');
+  await pause(rnd(800,1700));
+},
+
 ];
 
 // ===================== EASTER EGGS =====================
@@ -711,12 +781,12 @@ async function() {
   await pause(rnd(800,1600)); spacer();
   await aiType('yeah. what do you need.',35,90,200,500); spacer();
   await pause(rnd(500,1000));
-  await slowType('// what is the edge on the fed cut market right now','sl',40,110,200,500);
+  await slowType('// fed cut contract. yes at 34c. what does your model say','sl',40,110,200,500);
   await pause(rnd(500,1000)); spacer();
-  await aiType('YES sitting at 34c. implied prob 34%. my estimate is 47%. edge is +0.13.',35,90,200,500);
-  await aiType('kelly says 0.19. decent size.',35,90,200,500); spacer();
+  await aiType('implied is 34%. i have fair closer to 47%. gap is wide enough to care.',35,90,200,500);
+  await aiType('kelly on that delta lands around 0.19. size carefully.',35,90,200,500); spacer();
   await pause(rnd(500,1000));
-  await slowType('// ok. flagging it.','sl',40,110,200,500); spacer();
+  await slowType('// ok. logging it.','sl',40,110,200,500); spacer();
   await pause(rnd(2000,4000));
 },
 
@@ -743,8 +813,8 @@ async function() {
   await pause(rnd(500,1000));
   await slowType('// maybe 35 percent','sl',40,110,200,500);
   await pause(rnd(500,1000)); spacer();
-  await aiType('edge is +0.07. kelly gives 0.10 sizing.',35,90,200,500);
-  await aiType('small but positive. take it if you have conviction.',35,90,200,500); spacer();
+  await aiType('then you are paying 28c for something you rate at 35%. positive expected value if you trust the model.',35,90,200,500);
+  await aiType('kelly lands near 0.10. keep it small unless conviction is high.',35,90,200,500); spacer();
   await pause(rnd(500,1000));
   await slowType('// ok. taking a small one.','sl',40,110,200,500); spacer();
   await pause(rnd(2000,4000));
@@ -792,8 +862,8 @@ async function() {
   spacer();
   await typeLine('// polywog just tell me something useful','cm',35,90,150,400);
   await pause(rnd(800,1600)); spacer();
-  await aiType('the market you keep avoiding has +0.15 edge.',35,90,200,500);
-  await aiType('you have been watching it for two days.',35,90,200,500);
+  await aiType('the contract you keep tabbing has been cheap vs your number for 48 hours.',35,90,200,500);
+  await aiType('you already wrote the thesis. execution is the only open question.',35,90,200,500);
   await aiType('at some point watching is just procrastinating.',35,90,200,500); spacer();
   await pause(rnd(500,1000));
   await slowType('// ok fine. entering.','sl',40,110,200,500); spacer();
@@ -805,9 +875,9 @@ async function() {
   await pause(rnd(1000,2000));
   await slowType('// the market sets a probability.','sl',45,120,200,500);
   await pause(rnd(800,1600));
-  await slowType('// if my estimate is different, that is the edge.','sl',42,115,200,500);
+  await slowType('// if my estimate is different, that is the trade.','sl',42,115,200,500);
   await pause(rnd(800,1600));
-  await slowType('// kelly tells me how much to bet.','sl',45,120,200,500);
+  await slowType('// kelly tells me how much to size.','sl',45,120,200,500);
   await pause(rnd(800,1600));
   await slowType('// thats literally it.','sl',50,130,400,800);
   await pause(rnd(2500,5000));
@@ -861,6 +931,46 @@ async function() {
   await ultraFast(['processing '+rnd(10000,20000)+' market records...'],'dim');
   await insane(['  chunk 1: 1000 records... ok','  chunk 2: 1000 records... ok','  chunk 3: 1000 records... ok','  chunk 4: 1000 records... ok','  chunk 5: 1000 records... ok','  chunk 6: 1000 records... ok','  all chunks complete.','  indexed in '+rnd(1,5)+'.'+rnd(10,99)+'s'],'dim');
   await pause(rnd(800,1800));
+},
+
+async function() {
+  spacer();
+  await typeLine('// polywog. endpoints are slow tonight','cm',35,90,150,400);
+  await pause(rnd(800,1600)); spacer();
+  await aiType('p99 on reads is 420ms. not catastrophic. annoying.',35,90,200,500);
+  await aiType('retry with jitter. cache the hot keys.',35,90,200,500); spacer();
+  await pause(rnd(500,1000));
+  await slowType('// ok. wrapping calls in backoff.','sl',40,110,200,500); spacer();
+  await pause(rnd(2000,4000));
+},
+
+async function() {
+  await slowType('// boring beats clever every time','sl',48,125,200,500);
+  await pause(rnd(1200,2400));
+  await slowType('// small size. tight rules. repeat.','sl',45,120,400,800);
+  await pause(rnd(2500,4800));
+},
+
+async function() {
+  spacer();
+  await typeLine('// polywog. should i cut size after two reds','cm',35,90,150,400);
+  await pause(rnd(800,1600)); spacer();
+  await aiType('if the process is the same, no. if you tilted, yes.',35,90,200,500);
+  await aiType('track mood like you track pnl.',35,90,200,500); spacer();
+  await pause(rnd(500,1000));
+  await slowType('// fair.','sl',40,110,200,500); spacer();
+  await pause(rnd(2000,4000));
+},
+
+async function() {
+  current = ''; currentCls = 'cm'; currentIsAi = false; renderActive();
+  var txt = '// ship the smallest version that';
+  for (var i = 0; i < txt.length; i++) await typeChar(txt[i], rnd(55,135));
+  await pause(rnd(2800,4800));
+  var rest = ' still proves the idea';
+  for (var j = 0; j < rest.length; j++) await typeChar(rest[j], rnd(55,135));
+  await sl(400); commitLine('cm');
+  await pause(rnd(2000,4000));
 },
 
 ];
