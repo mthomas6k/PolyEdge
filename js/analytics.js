@@ -178,7 +178,7 @@ function renderWalletPrompt() {
         <div class="an-connect-icon">◎</div>
         <h2>Connect Your Polymarket Wallet</h2>
         <p>Enter your Polymarket wallet address to load on-chain positions and activity. Your address is public on-chain — no private keys needed.</p>
-        <p class="an-wallet-separate">This page is only your public prediction-market wallet. It is separate from any evaluation, balance, or rules on this platform.</p>
+        <p class="an-wallet-separate">On-chain wallet only—separate from your evaluation, balance, and rules on this platform.</p>
         <div class="an-input-row">
           <input class="form-input" id="pm-wallet-input" placeholder="0x... your wallet address" style="font-size:12px;letter-spacing:0.5px">
           <button class="form-btn" style="width:auto;padding:14px 28px;white-space:nowrap" onclick="connectWallet()">Load Portfolio →</button>
@@ -280,7 +280,7 @@ function renderAnalyticsDashboard(s, wallet) {
           <button class="an-change-wallet" onclick="loadAnalytics(true)">change</button>
         </div>
         <h1 class="an-title">Polymarket Wallet</h1>
-        <p class="an-wallet-separate">On-chain portfolio view only. Not tied to your evaluation, profit targets, or drawdown rules here.</p>
+        <p class="an-wallet-separate">On-chain portfolio only—separate from your evaluation, profit targets, and drawdown rules on this platform.</p>
       </div>
       <button class="an-refresh-btn" onclick="fetchAndRenderAnalytics('${wallet}')">
         <span class="an-refresh-icon">↻</span> Refresh

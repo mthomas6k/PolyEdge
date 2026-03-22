@@ -3,7 +3,7 @@
 :root{--bg:#04060a;--bg2:#080c14;--bg3:#0c1220;--bg4:#12192a;--border:#141e30;--border2:#1c2840;--text:#c0c8d8;--text2:#a8b4cc;--text3:#5a6a88;--accent:#3888e8;--accent2:#2a6cc4;--accentglow:rgba(56,136,232,0.06);--red:#e85555;--yellow:#c8a030;--green:#3dd68a;--poly-yes:#3dd68a;--poly-yes2:#2ab87a;--pm-no:#e85555;--mono:'JetBrains Mono','Menlo',monospace;--sans:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
 html{font-size:16px;scroll-behavior:smooth;background:var(--bg);overscroll-behavior-y:none;height:100%}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;min-height:100dvh;overflow-x:hidden;overscroll-behavior-y:none;position:relative}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;min-height:100dvh;overflow-x:hidden;overscroll-behavior-y:none;position:relative;display:flex;flex-direction:column}
 body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
 
 /* ========== HERO TERMINAL BACKGROUND ========== */
@@ -244,7 +244,7 @@ nav{position:fixed;top:0;left:0;right:0;min-height:56px;background:rgba(4,6,10,0
 
 /* Translucent shell so blue matrix shows on non-home; cards stay opaque */
 .page{display:none;padding-top:56px;min-height:0;position:relative;z-index:2;background:rgba(4,6,10,0.78);padding-bottom:0}
-.page.active{display:block;animation:fadeIn 0.28s ease;min-height:100vh;min-height:100dvh}
+.page.active{display:block;animation:fadeIn 0.28s ease;flex:1 1 auto;min-width:0}
 body.has-nav-ticker .page{padding-top:88px}
 
 #page-home.page{background:var(--bg)}
@@ -486,7 +486,10 @@ footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:cent
 
 .an-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;animation:fadeUp 0.35s ease both}
 .an-title{font-family:var(--sans);font-size:28px;font-weight:600;color:#fff;letter-spacing:-0.5px}
-.an-wallet-separate{font-family:var(--sans);font-size:13px;line-height:1.55;color:var(--text3);max-width:560px;margin-top:10px;padding:12px 14px;background:rgba(56,136,232,0.06);border:1px solid rgba(56,136,232,0.2);border-radius:12px}
+.an-wallet-separate{font-family:var(--sans);font-size:13px;line-height:1.35;color:var(--text3);max-width:100%;margin-top:10px;padding:8px 14px;background:rgba(56,136,232,0.06);border:1px solid rgba(56,136,232,0.2);border-radius:12px}
+@media(min-width:720px){
+  .an-wallet-separate{white-space:nowrap}
+}
 .an-connect-box .an-wallet-separate{margin-top:14px;text-align:left}
 .an-header-left{display:flex;flex-direction:column;align-items:flex-start;gap:0;flex:1;min-width:0}
 .an-wallet-badge{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -836,6 +839,10 @@ footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:cent
 .bottom-nav a:hover{color:var(--accent)}
 .bottom-nav .auth-only{display:none}
 .bottom-nav-copy{font-family:var(--mono);font-size:10px;color:var(--text3)}
+.bottom-nav-copy--full{white-space:nowrap;font-family:var(--sans);font-size:12px;font-weight:500;color:rgba(220,230,245,0.5)}
+@media(max-width:480px){
+  .bottom-nav-copy--full{white-space:normal}
+}
 
 /* ========== RESPONSIVE ========== */
 @media(max-width:900px){
