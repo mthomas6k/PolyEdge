@@ -1576,6 +1576,13 @@ function updateShellBackground(pageId) {
   }
 }
 
+function attachBottomNavToActivePage() {
+  const bar = document.getElementById('bottom-nav');
+  const page = document.querySelector('.page.active');
+  if (!bar || !page) return;
+  page.appendChild(bar);
+}
+
 function showPage(id) {
   let scrollEstimator = false;
   if (id === 'profit') {
@@ -1589,6 +1596,7 @@ function showPage(id) {
   const page = document.getElementById('page-' + id);
   if (page) {
     page.classList.add('active');
+    attachBottomNavToActivePage();
     if (!scrollEstimator) window.scrollTo(0, 0);
   }
 
@@ -1760,6 +1768,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.querySelectorAll('.mobile-nav-slip a[data-page]').forEach((a) => {
     a.classList.toggle('active', a.getAttribute('data-page') === activePid);
   });
+
+  attachBottomNavToActivePage();
 
   // Init homepage animations
   setTimeout(() => HomepageAnimations.init(), 200);

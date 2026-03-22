@@ -244,7 +244,8 @@ nav{position:fixed;top:0;left:0;right:0;min-height:56px;background:rgba(4,6,10,0
 
 /* Translucent shell so blue matrix shows on non-home; cards stay opaque */
 .page{display:none;padding-top:56px;min-height:0;position:relative;z-index:2;background:rgba(4,6,10,0.78);padding-bottom:0}
-.page.active{display:block;animation:fadeIn 0.28s ease;flex:1 1 auto;min-width:0}
+.page.active{display:flex;flex-direction:column;animation:fadeIn 0.28s ease;flex:1 1 auto;min-width:0;min-height:100vh;min-height:100dvh}
+.page.active #bottom-nav{margin-top:auto;flex-shrink:0;width:100%}
 body.has-nav-ticker .page{padding-top:88px}
 
 #page-home.page{background:var(--bg)}
@@ -831,7 +832,7 @@ footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:cent
   .mobile-nav-slip__link.active{color:var(--accent);border-color:rgba(56,136,232,0.35);background:rgba(56,136,232,0.08)}
   body{padding-bottom:calc(56px + env(safe-area-inset-bottom,0px))}
 }
-.bottom-nav{background:var(--bg2);border-top:1px solid var(--border);padding:32px;margin-top:0}
+.bottom-nav{background:var(--bg2);border-top:1px solid var(--border);padding:32px;position:relative;z-index:4}
 .bottom-nav-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
 .bottom-nav-group{display:flex;flex-direction:column;gap:8px}
 .bottom-nav-label{font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(230,238,255,0.45);margin-bottom:8px}
