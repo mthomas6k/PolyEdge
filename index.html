@@ -716,30 +716,39 @@
 
   <!-- Bet from Dashboard Modal -->
   <div class="modal-bg" id="market-bet-modal">
-    <div class="modal">
+    <div class="modal modal--bet pe-modal-r">
       <button class="modal-close" onclick="closeModal('market-bet-modal')">✕</button>
-      <h3>Place Bet</h3>
+      <h3>Size your trade</h3>
+      <p class="mbet-lead">Enter dollars or % of your <strong>evaluation balance</strong> (max 15% per position).</p>
       <div class="msg msg-err" id="mbet-err"></div>
-      <p id="mbet-market-info" style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:16px"></p>
+      <p id="mbet-market-info" class="mbet-market-info"></p>
       <input type="hidden" id="mbet-market-name">
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Side</label>
-          <select class="form-select" id="mbet-side">
+          <select class="form-select" id="mbet-side" onchange="updateMbetSummary()">
             <option value="YES">YES</option>
             <option value="NO">NO</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Entry Price (¢)</label>
-          <input class="form-input" id="mbet-entry" type="number" min="1" max="99">
+          <label class="form-label">Entry (¢)</label>
+          <input class="form-input" id="mbet-entry" type="number" min="1" max="99" oninput="updateMbetSummary()">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Trade Size ($)</label>
-        <input class="form-input" id="mbet-size" type="number" placeholder="e.g. 50" min="1">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Size ($)</label>
+          <input class="form-input" id="mbet-size" type="number" placeholder="e.g. 75" min="0.01" step="0.01" oninput="syncMbetFromDollars()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Or % of balance</label>
+          <input class="form-input" id="mbet-pct" type="number" placeholder="e.g. 5" min="0.1" max="15" step="0.1" oninput="syncMbetFromPct()">
+        </div>
       </div>
-      <button class="form-btn" onclick="placeDashboardBet()">Place Bet →</button>
+      <div class="mbet-calc-summary" id="mbet-summary">Select an evaluation on Accounts.</div>
+      <div class="mbet-calc-preview" id="mbet-preview"></div>
+      <button class="form-btn" onclick="placeDashboardBet()">Place trade →</button>
     </div>
   </div>
 
@@ -792,8 +801,8 @@
   <script src="js/matrixRain.js"></script>
   <script src="js/loginNetwork.js"></script>
   <script src="js/homepageAnimations.js"></script>
-  <script src="js/analytics.js?v=9"></script>
-  <script src="js/app.js?v=12"></script>
+  <script src="js/analytics.js?v=11"></script>
+  <script src="js/app.js?v=14"></script>
   <script src="js/terminalBg.js"></script>
 
 </body>

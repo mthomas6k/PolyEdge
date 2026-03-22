@@ -1,7 +1,8 @@
 // ==========================================
 // POLYMARKET SERVICE — Gamma API
-// 1) Supabase Edge Function gamma-proxy (deploy: supabase functions deploy gamma-proxy --no-verify-jwt)
-// 2) Public CORS proxies as fallback
+// - Admin: direct gamma-api first (fast), then gamma-proxy, then public proxies
+// - Non-admin: gamma-proxy only (no public CORS proxies)
+// Deploy gamma-proxy: supabase functions deploy gamma-proxy --no-verify-jwt
 // ==========================================
 
 const PolymarketService = (() => {
@@ -23,6 +24,32 @@ const PolymarketService = (() => {
     fullCache = { list: [], ts: 0 };
   }
 
+  function isPolyEdgeAdmin() {
+    try {
+      return typeof window !== 'undefined' && !!window.__POLYEDGE_IS_ADMIN__;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function fetchGammaDirect(path) {
+    const fullUrl = `${GAMMA_API}/${path}`;
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 20000);
+    try {
+      const r = await fetch(fullUrl, { signal: controller.signal });
+      clearTimeout(t);
+      const text = await r.text();
+      if (!r.ok || !text || !text.trim()) return null;
+      const data = JSON.parse(text);
+      return Array.isArray(data) ? data : null;
+    } catch (e) {
+      clearTimeout(t);
+      console.warn('gamma-api direct:', e.message);
+      return null;
+    }
+  }
+
   function config() {
     return typeof window !== 'undefined' && window.POLYEDGE_CONFIG
       ? window.POLYEDGE_CONFIG
@@ -30,10 +57,17 @@ const PolymarketService = (() => {
   }
 
   /**
-   * Fetch JSON from Gamma via Supabase function (same-origin to your project) or proxies.
+   * Fetch JSON from Gamma: admin tries direct API first; everyone uses gamma-proxy; public proxies admin-only fallback.
    * @param {string} path — e.g. markets?limit=10&offset=0
    */
   async function fetchGammaPath(path) {
+    const admin = isPolyEdgeAdmin();
+
+    if (admin) {
+      const direct = await fetchGammaDirect(path);
+      if (direct) return direct;
+    }
+
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = config();
     const base = (SUPABASE_URL || '').replace(/\/$/, '');
     if (base) {
@@ -58,8 +92,13 @@ const PolymarketService = (() => {
       }
     }
 
-    const fullUrl = `${GAMMA_API}/${path}`;
-    return fetchViaPublicProxies(fullUrl);
+    if (admin) {
+      return fetchViaPublicProxies(`${GAMMA_API}/${path}`);
+    }
+
+    throw new Error(
+      'Markets could not be loaded. Deploy the gamma-proxy Supabase function or sign in with an admin account.'
+    );
   }
 
   async function fetchViaPublicProxies(fullUrl, attempt = 0) {

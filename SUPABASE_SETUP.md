@@ -91,25 +91,32 @@ The app loads Supabase URL and anon key from **`js/config.js`**. To avoid hardco
 
 ---
 
-## 6. Stripe Edge Functions (create-checkout + webhook)
+## 6. Stripe Edge Functions (create-checkout + webhook + finalize-checkout)
 
-The app uses two Supabase Edge Functions for real Stripe payments:
+The app uses three Supabase Edge Functions for Stripe payments:
 
-1. **create-checkout** — Creates a Stripe Checkout Session when the user clicks “Start Challenge”. The frontend sends the user’s Supabase JWT and the chosen challenge type/size; the function returns the Stripe Checkout URL and the user is redirected there.
-2. **stripe-webhook** — Receives Stripe `checkout.session.completed` events. It verifies the webhook signature, then uses the **service role** client to insert a row into `evaluations` for the paying user.
+1. **create-checkout** — Creates a Stripe Checkout Session when the user clicks “Start Challenge”. Success URL includes `session_id={CHECKOUT_SESSION_ID}` so the browser can confirm the purchase.
+2. **stripe-webhook** — Receives Stripe `checkout.session.completed` events. It verifies the webhook signature, then uses the **service role** client to insert a row into `evaluations` for the paying user (with `stripe_checkout_session_id` for idempotency).
+3. **finalize-checkout** — After redirect, the logged-in user calls this with `session_id`; it verifies payment with Stripe and inserts the evaluation if the webhook never ran (sandbox without Stripe CLI, or webhook misconfiguration).
+
+### Database migration (required for idempotency)
+
+Run `supabase/migrations/20250317_eval_stripe_session.sql` in the **SQL Editor** (adds `stripe_checkout_session_id` + unique index). Without it, webhook/finalize may fail until the column exists.
 
 ### Deploy and configure
 
 1. **Deploy the functions** (from the project root, if using Supabase CLI):
    - `supabase functions deploy create-checkout`
    - `supabase functions deploy stripe-webhook`
+   - `supabase functions deploy finalize-checkout`
 
-   Or create and paste the code from `supabase/functions/create-checkout/index.ts` and `supabase/functions/stripe-webhook/index.ts` in the Dashboard: **Edge Functions** → New function.
+   Or create and paste the code from `supabase/functions/*/index.ts` in the Dashboard: **Edge Functions** → New function.
 
 2. **Set secrets** in Supabase Dashboard → **Edge Functions** → each function → **Secrets** (or via CLI `supabase secrets set ...`):
 
    - **create-checkout**: `STRIPE_SECRET_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
    - **stripe-webhook**: `STRIPE_WEBHOOK_SECRET`, `STRIPE_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`
+   - **finalize-checkout**: `STRIPE_SECRET_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
 
    Use your Stripe secret key (e.g. `sk_test_...`), the webhook signing secret from Stripe Dashboard → Developers → Webhooks (e.g. `whsec_...`), and the Supabase URL and keys from Project Settings → API. **Never commit these values**; they live only in Edge Function secrets.
 
@@ -123,7 +130,7 @@ The app uses two Supabase Edge Functions for real Stripe payments:
 
 ## 7. Backend mediation (Stripe flow)
 
-The Stripe flow is implemented as in section 6: the frontend never creates evaluations for purchases. It redirects to Stripe Checkout; the **stripe-webhook** Edge Function receives `checkout.session.completed` and uses the service role to insert into `evaluations`. The frontend only reads/writes within RLS (e.g. trading on an evaluation that already exists).
+The Stripe flow: redirect to Checkout → **stripe-webhook** (preferred) or **finalize-checkout** on return (fallback) creates the `evaluations` row. The frontend never inserts evaluations for money without the server verifying Stripe. Optional: set `window.POLYEDGE_CONFIG.SITE_BASE_URL` so `create-checkout` returns to the correct path on GitHub Pages.
 
 
 ---
@@ -135,4 +142,5 @@ The Stripe flow is implemented as in section 6: the frontend never creates evalu
 - [ ] Set `is_admin = true` for admin accounts in `profiles`.
 - [ ] Confirm **service role** key is never in the frontend or in public config.
 - [ ] (Optional) Set `window.__POLYEDGE_ENV` in production so anon key/URL aren’t hardcoded.
-- [ ] Deploy Stripe Edge Functions (`create-checkout`, `stripe-webhook`) and set their secrets; configure Stripe webhook to point at `stripe-webhook`.
+- [ ] Run SQL migration for `stripe_checkout_session_id`.
+- [ ] Deploy Stripe Edge Functions (`create-checkout`, `stripe-webhook`, `finalize-checkout`) and set their secrets; configure Stripe webhook to point at `stripe-webhook`.

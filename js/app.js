@@ -9,6 +9,26 @@ function getCreateCheckoutUrl() {
   return SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/create-checkout';
 }
 
+function getFinalizeCheckoutUrl() {
+  if (!SUPABASE_URL) return '';
+  return SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/finalize-checkout';
+}
+
+function getSiteBaseUrl() {
+  try {
+    if (typeof window !== 'undefined' && window.POLYEDGE_CONFIG && window.POLYEDGE_CONFIG.SITE_BASE_URL) {
+      return String(window.POLYEDGE_CONFIG.SITE_BASE_URL).replace(/\/$/, '');
+    }
+    const { origin, pathname } = window.location;
+    if (!origin || origin === 'null') return '';
+    const noFile = pathname.replace(/\/[^/]+\.html?$/i, '');
+    if (noFile === '/' || noFile === '') return origin;
+    return origin + (noFile.endsWith('/') ? noFile.slice(0, -1) : noFile);
+  } catch (e) {
+    return '';
+  }
+}
+
 // ==========================================
 // SUPABASE INIT (anon key only — never use service_role in frontend)
 // ==========================================
@@ -40,6 +60,7 @@ async function checkSession() {
       // Load accounts after auth
       await AccountManager.loadAccounts();
       AccountManager.restoreSelection();
+      syncActiveEval();
     } else {
       updateAuthUI(false);
     }
@@ -58,6 +79,12 @@ async function loadProfile() {
 }
 
 function updateAuthUI(loggedIn) {
+  const prevAdmin = window.__POLYEDGE_IS_ADMIN__;
+  window.__POLYEDGE_IS_ADMIN__ = !!(loggedIn && currentProfile && currentProfile.is_admin);
+  if (window.__POLYEDGE_IS_ADMIN__ && !prevAdmin && typeof PolymarketService !== 'undefined' && PolymarketService.invalidateMarketsCache) {
+    PolymarketService.invalidateMarketsCache();
+  }
+
   const navUser = document.getElementById('nav-user');
   const authBtn = document.getElementById('nav-auth-btn');
   const logoutBtn = document.getElementById('nav-logout-btn');
@@ -424,7 +451,8 @@ function polyMarketRedraw() {
   if (!grid) return;
 
   const filtered = getFilteredMarkets();
-  const canBet = !!activeEval;
+  const sel = typeof AccountManager !== 'undefined' ? AccountManager.getSelected() : null;
+  const canBet = !!(sel && (sel.status === 'active' || sel.status === 'funded'));
   const searching = PM_STATE.query.trim().length > 1;
 
   if (!filtered.length) {
@@ -604,9 +632,11 @@ async function loadDashboard() {
           <span class="pm-strip-item"><span class="pm-strip-l">Day</span><strong>${daysUsed}/${daysTotal}</strong></span>
           <span class="pm-strip-item"><span class="pm-strip-l">P&amp;L vs target</span><strong class="${profit>=0?'pgrn':'pred'}">${fmt(Math.max(0,profit))} / ${fmt(profitTarget)}</strong></span>
           <span class="pm-strip-item"><span class="pm-strip-l">DD</span><strong>${ddUsed.toFixed(1)}%</strong></span>
-          <a href="#" class="pm-strip-link" data-page="dashboard">Full stats →</a>
+          <a href="#" class="pm-strip-link" data-page="dashboard">Dashboard →</a>
+          <a href="#" class="pm-strip-link" data-page="accounts">Accounts →</a>
         </div>
       </div>
+      ${renderDashEvalHub(e, closedTrades)}
       <div class="dash-trades-stack">
         <div class="dp">
           <div class="dp-header"><div class="dp-title">Open Positions</div><div style="display:flex;gap:8px"><span class="dp-badge">${openTrades.length} Active</span><button class="form-btn" style="width:auto;padding:6px 16px;font-size:10px" onclick="openModal('trade-modal')">+ New Trade</button></div></div>
@@ -617,11 +647,19 @@ async function loadDashboard() {
           ${closedTrades.length ? `<table class="tbl"><thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Exit</th><th>P&L</th></tr></thead><tbody>${closedTrades.map(t=>`<tr><td>${t.contract_name}</td><td>${t.side}</td><td>${fmt(t.trade_size)}</td><td>${(t.entry_price*100).toFixed(1)}¢</td><td>${(t.exit_price*100).toFixed(1)}¢</td><td class="${t.pnl>=0?'pgrn':'pred'}">${t.pnl>=0?'+':''}${fmt(t.pnl)}</td></tr>`).join('')}</tbody></table>` : '<p style="color:var(--text3);font-size:13px">No closed trades yet</p>'}
         </div>
       </div>
+      <div id="dash-eval-calendar" class="dash-cal-shell"></div>
       <div class="dash-markets-section dash-markets-section--wide">
         ${marketsChromeHTML()}
       </div>
     </div>`;
   bindDataPage();
+
+  CalendarComponent.setTrades(closedTrades);
+  CalendarComponent.setMilestones([
+    { at: e.expires_at, label: 'Phase deadline', kind: 'deadline' },
+    ...(e.created_at ? [{ at: e.created_at, label: 'Eval started', kind: 'start' }] : [])
+  ]);
+  CalendarComponent.render('dash-eval-calendar');
 
   // Load live markets asynchronously
   loadLiveMarkets();
@@ -735,9 +773,22 @@ function profitCalc() {
   }
 }
 
-function openMarketBet(marketName, side, price) {
+function openMarketBet(marketName, side, price, retried) {
+  syncActiveEval();
+  if (!activeEval && !retried && typeof AccountManager !== 'undefined') {
+    AccountManager.loadAccounts().then(() => {
+      AccountManager.restoreSelection();
+      syncActiveEval();
+      openMarketBet(marketName, side, price, true);
+    });
+    return;
+  }
   if (!activeEval) {
-    alert('No active evaluation. Start a challenge first.');
+    alert('No active evaluation. Purchase a challenge or pick an account on the Accounts tab.');
+    return;
+  }
+  if (activeEval.status !== 'active' && activeEval.status !== 'funded') {
+    alert('This evaluation is not active — you cannot open new trades.');
     return;
   }
   document.getElementById('mbet-market-name').value = marketName;
@@ -745,15 +796,71 @@ function openMarketBet(marketName, side, price) {
   document.getElementById('mbet-side').value = side;
   document.getElementById('mbet-entry').value = Math.round(price * 100);
   document.getElementById('mbet-size').value = '';
+  const pctEl = document.getElementById('mbet-pct');
+  if (pctEl) pctEl.value = '';
   const errEl = document.getElementById('mbet-err');
   if (errEl) errEl.style.display = 'none';
+  updateMbetSummary();
   openModal('market-bet-modal');
+}
+
+function updateMbetSummary() {
+  const sum = document.getElementById('mbet-summary');
+  const prev = document.getElementById('mbet-preview');
+  const ev = typeof AccountManager !== 'undefined' ? AccountManager.getSelected() : activeEval;
+  if (!sum) return;
+  if (!ev) {
+    sum.innerHTML = 'Select an evaluation on the <strong>Accounts</strong> tab.';
+    if (prev) prev.innerHTML = '';
+    return;
+  }
+  const max = ev.balance * 0.15;
+  sum.innerHTML = `Balance <strong>${fmt(ev.balance)}</strong> · Max trade (15%) <strong>${fmt(max)}</strong> · Commission ~1% of size`;
+  const entry = parseFloat(document.getElementById('mbet-entry')?.value) / 100;
+  const sz = parseFloat(document.getElementById('mbet-size')?.value) || 0;
+  const side = document.getElementById('mbet-side')?.value || 'YES';
+  if (prev && entry > 0 && entry < 1 && sz > 0) {
+    if (side === 'YES') {
+      const shares = sz / entry;
+      const maxProfit = shares - sz;
+      prev.innerHTML = `≈ <strong>${shares.toFixed(1)}</strong> YES shares · if YES wins, payout ~<strong>${fmt(shares)}</strong> · max gain <strong>${fmt(maxProfit)}</strong> <span class="mbet-prev-note">(model, not advice)</span>`;
+    } else {
+      const eNo = 1 - entry;
+      const shares = eNo > 0 ? sz / eNo : 0;
+      const maxProfit = shares > 0 ? shares - sz : 0;
+      prev.innerHTML = eNo > 0
+        ? `≈ <strong>${shares.toFixed(1)}</strong> NO shares · if NO wins, max gain ~<strong>${fmt(maxProfit)}</strong> <span class="mbet-prev-note">(model)</span>`
+        : '';
+    }
+  } else if (prev) prev.innerHTML = '';
+}
+
+function syncMbetFromDollars() {
+  const ev = typeof AccountManager !== 'undefined' ? AccountManager.getSelected() : activeEval;
+  const bal = ev ? Number(ev.balance) : 0;
+  const sz = parseFloat(document.getElementById('mbet-size')?.value) || 0;
+  const pctEl = document.getElementById('mbet-pct');
+  if (pctEl && bal > 0) pctEl.value = sz > 0 ? ((sz / bal) * 100).toFixed(2) : '';
+  updateMbetSummary();
+}
+
+function syncMbetFromPct() {
+  const ev = typeof AccountManager !== 'undefined' ? AccountManager.getSelected() : activeEval;
+  const bal = ev ? Number(ev.balance) : 0;
+  const pct = parseFloat(document.getElementById('mbet-pct')?.value) || 0;
+  const szEl = document.getElementById('mbet-size');
+  if (szEl && bal > 0 && pct > 0) szEl.value = ((pct / 100) * bal).toFixed(2);
+  updateMbetSummary();
 }
 
 async function placeDashboardBet() {
   const errEl = document.getElementById('mbet-err');
   if (errEl) errEl.style.display = 'none';
+  syncActiveEval();
   if (!activeEval || !sb) { showMsg(errEl, 'No active evaluation', 'err'); return; }
+  if (activeEval.status !== 'active' && activeEval.status !== 'funded') {
+    showMsg(errEl, 'This evaluation cannot accept new trades.', 'err'); return;
+  }
 
   const name = document.getElementById('mbet-market-name')?.value;
   const side = document.getElementById('mbet-side')?.value;
@@ -846,13 +953,126 @@ function initRiskPostureDropdown() {
 
 function fmt(n) { return '$' + Number(n || 0).toFixed(2); }
 
+function syncActiveEval() {
+  try {
+    activeEval = typeof AccountManager !== 'undefined' ? AccountManager.getSelected() : null;
+  } catch (e) {
+    activeEval = null;
+  }
+}
+
+async function finalizeCheckoutSession(sessionId) {
+  if (!sb || !sessionId || !SUPABASE_URL) return { ok: false, error: 'Not configured' };
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { ok: false, error: 'Sign in required' };
+  try {
+    const res = await fetch(getFinalizeCheckoutUrl(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+        'apikey': SUPABASE_KEY
+      },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: j.error || ('HTTP ' + res.status) };
+    return j;
+  } catch (e) {
+    return { ok: false, error: e.message || 'Network error' };
+  }
+}
+
+/** @param {object} e evaluation */
+function evalGradeLabel(e, closedTrades) {
+  const profit = (Number(e.balance) || 0) - (Number(e.starting_balance) || 0);
+  const target = (Number(e.starting_balance) || 0) * ((Number(e.profit_target_pct) || 10) / 100);
+  const st = e.status || '';
+  if (st === 'passed' || st === 'funded') return { label: 'Challenge cleared', cls: 'pe-grade-elite', sub: 'Rules satisfied — outstanding.' };
+  if (st === 'failed' || st === 'expired') return { label: 'Evaluation closed', cls: 'pe-grade-end', sub: st.charAt(0).toUpperCase() + st.slice(1) };
+  const pct = target > 0 ? (profit / target) * 100 : 0;
+  if (pct >= 100) return { label: 'Target in sight', cls: 'pe-grade-great', sub: 'Lock in consistency & minimum trades.' };
+  if (pct >= 55) return { label: 'On track', cls: 'pe-grade-good', sub: 'Stay within drawdown & size limits.' };
+  if (profit > 0) return { label: 'Profitable', cls: 'pe-grade-ok', sub: 'Building toward the profit target.' };
+  if (profit === 0 || (profit > -1 && profit < 1)) return { label: 'Breakeven', cls: 'pe-grade-flat', sub: 'Capital preserved — look for edge.' };
+  return { label: 'Under pressure', cls: 'pe-grade-risk', sub: 'Prioritize drawdown control.' };
+}
+
+function renderDashEvalHub(e, closedTrades) {
+  const profit = e.balance - e.starting_balance;
+  const profitTarget = e.starting_balance * (e.profit_target_pct / 100);
+  const profitBar = profitTarget > 0 ? Math.min(100, (Math.max(0, profit) / profitTarget) * 100) : 0;
+  const ddUsed = e.high_water_mark > 0 ? ((e.high_water_mark - e.balance) / e.high_water_mark * 100) : 0;
+  const ddBar = e.max_drawdown_pct > 0 ? Math.min(100, (ddUsed / e.max_drawdown_pct) * 100) : 0;
+  let largestPct = 0;
+  let consistencyOk = true;
+  const closedProfit = closedTrades.filter(t => t.pnl > 0).reduce((s, t) => s + t.pnl, 0);
+  if (closedProfit > 0 && closedTrades.length > 0) {
+    const maxTrade = Math.max(...closedTrades.filter(t => t.pnl > 0).map(t => t.pnl), 0);
+    largestPct = (maxTrade / closedProfit) * 100;
+    consistencyOk = largestPct <= e.consistency_rule_pct;
+  }
+  const tradesProgress = Math.min(100, (e.trades_count / Math.max(1, e.min_trades)) * 100);
+  const daysLeft = Math.max(0, Math.ceil((new Date(e.expires_at).getTime() - Date.now()) / 86400000));
+  const g = evalGradeLabel(e, closedTrades);
+  const phaseLine = e.eval_type === '1-step'
+    ? '<div class="pe-phase-track"><span class="pe-phase-dot pe-phase-on">1</span><span class="pe-phase-line"></span><span class="pe-phase-dot">Funded</span></div>'
+    : (e.phase === 1
+      ? '<div class="pe-phase-track"><span class="pe-phase-dot pe-phase-on">P1</span><span class="pe-phase-line"></span><span class="pe-phase-dot">P2</span><span class="pe-phase-line"></span><span class="pe-phase-dot">Funded</span></div>'
+      : '<div class="pe-phase-track"><span class="pe-phase-dot pe-phase-done">P1</span><span class="pe-phase-line pe-phase-line-on"></span><span class="pe-phase-dot pe-phase-on">P2</span><span class="pe-phase-line"></span><span class="pe-phase-dot">Funded</span></div>');
+
+  return `
+    <div class="dash-eval-hub pe-card-r">
+      <div class="pe-hub-top">
+        <div>
+          <div class="pe-hub-kicker">Evaluation progress</div>
+          <h3 class="pe-hub-title">${e.eval_type === '1-step' ? 'One-step challenge' : 'Two-step challenge'} · $${Number(e.account_size).toLocaleString()}</h3>
+          ${phaseLine}
+        </div>
+        <div class="pe-grade-pill ${g.cls}">
+          <div class="pe-grade-label">${g.label}</div>
+          <div class="pe-grade-sub">${g.sub}</div>
+        </div>
+      </div>
+      <div class="pe-hub-grid">
+        <div class="pe-goal">
+          <div class="pe-goal-h"><span>Profit target</span><span class="pe-goal-pct">${profitBar.toFixed(0)}%</span></div>
+          <div class="pe-bar"><span style="width:${profitBar}%"></span></div>
+          <div class="pe-goal-foot">${fmt(Math.max(0, profit))} / ${fmt(profitTarget)} · ${e.profit_target_pct}% rule</div>
+        </div>
+        <div class="pe-goal">
+          <div class="pe-goal-h"><span>Drawdown used</span><span class="pe-goal-pct">${ddUsed.toFixed(1)}% / ${e.max_drawdown_pct}%</span></div>
+          <div class="pe-bar pe-bar-warn"><span style="width:${ddBar}%"></span></div>
+          <div class="pe-goal-foot">High water ${fmt(e.high_water_mark)}</div>
+        </div>
+        <div class="pe-goal">
+          <div class="pe-goal-h"><span>Min closed trades</span><span class="pe-goal-pct">${e.trades_count} / ${e.min_trades}</span></div>
+          <div class="pe-bar pe-bar-neutral"><span style="width:${tradesProgress}%"></span></div>
+          <div class="pe-goal-foot">Counts toward pass rules</div>
+        </div>
+        <div class="pe-goal">
+          <div class="pe-goal-h"><span>Consistency</span><span class="pe-goal-pct ${consistencyOk ? 'pgrn' : 'pred'}">${consistencyOk ? 'OK' : 'Watch'}</span></div>
+          <div class="pe-goal-foot">Largest win vs gross profit: ${largestPct.toFixed(0)}% (max ${e.consistency_rule_pct}%)</div>
+        </div>
+      </div>
+      <div class="pe-hub-deadline">
+        <span class="pe-dl-ic">⏱</span>
+        <strong>${daysLeft}</strong> day${daysLeft === 1 ? '' : 's'} left in this phase · deadline ${new Date(e.expires_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+      </div>
+    </div>`;
+}
+
 // ==========================================
 // TRADES
 // ==========================================
 async function openTrade() {
   const errEl = document.getElementById('trade-err');
   if (errEl) errEl.style.display = 'none';
+  syncActiveEval();
   if (!activeEval || !sb) { showMsg(errEl, 'No active evaluation', 'err'); return; }
+  if (activeEval.status !== 'active' && activeEval.status !== 'funded') {
+    showMsg(errEl, 'This evaluation cannot accept new trades.', 'err'); return;
+  }
 
   const name = document.getElementById('tr-name')?.value?.trim();
   const side = document.getElementById('tr-side')?.value;
@@ -902,6 +1122,7 @@ function openCloseModal(tradeId, name, entry, side, size) {
 
 async function closeTrade() {
   if (!sb) return;
+  syncActiveEval();
   const errEl = document.getElementById('close-err');
   if (errEl) errEl.style.display = 'none';
   const exitPrice = parseFloat(document.getElementById('cl-exit')?.value) / 100;
@@ -1144,17 +1365,19 @@ async function loadPolyEdgeStats() {
     });
 
     container.innerHTML = `
-      <div class="an-header">
+      <div class="an-header pe-dash-head">
         <div class="an-header-left">
-          <h1 class="an-title">PolyEdge Stats</h1>
+          <h1 class="an-title">Evaluation dashboard</h1>
           <div class="an-wallet-badge" style="margin-top:8px">
             <span class="an-wallet-dot"></span>
-            <span class="an-wallet-addr">Account: $${Number(selectedAccount.account_size).toLocaleString()} · ${selectedAccount.eval_type} · Phase ${selectedAccount.phase}</span>
+            <span class="an-wallet-addr">$${Number(selectedAccount.account_size).toLocaleString()} · ${selectedAccount.eval_type} · Phase ${selectedAccount.phase}</span>
           </div>
         </div>
       </div>
 
-      <div class="an-kpis">
+      ${renderDashEvalHub(selectedAccount, closedTrades)}
+
+      <div class="an-kpis pe-kpis-r">
         <div class="an-kpi">
           <div class="an-kpi-label">Total P&L</div>
           <div class="an-kpi-val" style="color:${totalPnl >= 0 ? 'var(--green)' : 'var(--red)'}">${totalPnl >= 0 ? '+' : ''}$${Math.abs(totalPnl).toFixed(2)}</div>
@@ -1236,6 +1459,10 @@ async function loadPolyEdgeStats() {
         .eq('status', 'closed')
         .order('closed_at', { ascending: false });
       CalendarComponent.setTrades(allClosed || []);
+      CalendarComponent.setMilestones([
+        { at: selectedAccount.expires_at, label: 'Phase deadline', kind: 'deadline' },
+        ...(selectedAccount.created_at ? [{ at: selectedAccount.created_at, label: 'Eval started', kind: 'start' }] : [])
+      ]);
       CalendarComponent.render('stats-calendar');
     })();
   } catch (e) {
@@ -1535,7 +1762,8 @@ async function startChallenge(type, size) {
       body: JSON.stringify({
         type: type,
         size: size,
-      })      
+        success_base_url: getSiteBaseUrl() || undefined,
+      })
     });
     const data = await res.json();
     if (data?.url) {
@@ -1750,19 +1978,39 @@ document.addEventListener('DOMContentLoaded', async function() {
     bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
   });
 
-  // Payment success / cancel
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('payment') === 'success') {
-    window.history.replaceState({}, '', window.location.pathname || '/');
-    await checkSession();
-    alert('Payment received! Your evaluation will be activated shortly.');
-    showPage('markets');
-  } else if (params.get('payment') === 'cancelled') {
-    window.history.replaceState({}, '', window.location.pathname || '/');
-  }
-
-  // Init session
+  // Init session first (needed for finalize-checkout)
   await checkSession();
+
+  const payParams = new URLSearchParams(window.location.search);
+  if (payParams.get('payment') === 'success') {
+    const stripeSessionId = payParams.get('session_id');
+    let msg = 'Payment received.';
+    if (stripeSessionId && sb && currentUser && getFinalizeCheckoutUrl()) {
+      const r = await finalizeCheckoutSession(stripeSessionId);
+      if (r.ok) {
+        await AccountManager.loadAccounts();
+        AccountManager.restoreSelection();
+        syncActiveEval();
+        msg = r.already
+          ? 'Your evaluation is already linked — head to Accounts or Markets.'
+          : 'Your evaluation account is ready. You can trade from Markets or the Dashboard.';
+      } else {
+        msg = 'Payment received. If your account does not show on Accounts in a minute, confirm the Stripe webhook is deployed, or run the SQL migration for stripe_checkout_session_id. Details: ' + (r.error || 'unknown');
+      }
+    } else {
+      await AccountManager.loadAccounts();
+      AccountManager.restoreSelection();
+      syncActiveEval();
+      msg += ' Open Accounts — if empty, configure Stripe webhook (checkout.session.completed) or use the finalize-checkout function with session_id in the success URL.';
+    }
+    const clean = window.location.pathname + (window.location.hash || '');
+    window.history.replaceState({}, '', clean || '/');
+    alert(msg);
+    showPage('markets');
+    await loadDashboard();
+  } else if (payParams.get('payment') === 'cancelled') {
+    window.history.replaceState({}, '', window.location.pathname + (window.location.hash || '') || '/');
+  }
 
   const activePid = document.querySelector('.page.active')?.id?.replace(/^page-/, '') || 'home';
   document.querySelectorAll('.mobile-nav-slip a[data-page]').forEach((a) => {

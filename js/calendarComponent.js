@@ -7,9 +7,15 @@ const CalendarComponent = (() => {
   let currentMonth = new Date().getMonth();
   let currentYear = new Date().getFullYear();
   let closedTrades = [];
+  /** @type {{ at: string, label: string, kind?: string }[]} */
+  let milestones = [];
 
   function setTrades(trades) {
     closedTrades = (trades || []).filter(t => t.status === 'closed' && t.closed_at);
+  }
+
+  function setMilestones(list) {
+    milestones = Array.isArray(list) ? list.filter(m => m && m.at) : [];
   }
 
   function getMonthData(year, month) {
@@ -35,7 +41,17 @@ const CalendarComponent = (() => {
     const bestDay = Math.max(...Object.values(dailyPnl), 0);
     const worstDay = Math.min(...Object.values(dailyPnl), 0);
 
-    return { daysInMonth, firstDay, dailyPnl, dailyTrades, totalPnl, tradingDays, winDays, lossDays, bestDay, worstDay };
+    const milestoneByDay = {};
+    milestones.forEach(m => {
+      const d = new Date(m.at);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        if (!milestoneByDay[day]) milestoneByDay[day] = [];
+        milestoneByDay[day].push(m);
+      }
+    });
+
+    return { daysInMonth, firstDay, dailyPnl, dailyTrades, totalPnl, tradingDays, winDays, lossDays, bestDay, worstDay, milestoneByDay };
   }
 
   function render(containerId) {
@@ -54,16 +70,26 @@ const CalendarComponent = (() => {
       const pnl = data.dailyPnl[d];
       const trades = data.dailyTrades[d] || [];
       const hasTrades = pnl !== undefined;
+      const ms = data.milestoneByDay[d] || [];
+      const hasMilestone = ms.length > 0;
       const isToday = d === new Date().getDate() && currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
       let cls = 'cal-cell';
       if (isToday) cls += ' cal-today';
+      if (hasMilestone) cls += ' cal-milestone';
       if (hasTrades && pnl > 0) cls += ' cal-green';
       if (hasTrades && pnl < 0) cls += ' cal-red';
       if (hasTrades && pnl === 0) cls += ' cal-neutral';
 
+      const msHtml = hasMilestone
+        ? `<div class="cal-milestone-pill" title="${ms.map(m => m.label).join(' · ')}">${ms[0].label}</div>`
+        : '';
+
+      const click = hasTrades || hasMilestone ? `onclick="CalendarComponent.showDayDetail(${d})"` : '';
+
       calendarCells += `
-        <div class="${cls}" ${hasTrades ? `onclick="CalendarComponent.showDayDetail(${d})"` : ''}>
+        <div class="${cls}" ${click}>
           <div class="cal-day-num">${d}</div>
+          ${msHtml}
           ${hasTrades ? `
             <div class="cal-day-pnl ${pnl >= 0 ? 'cal-pnl-pos' : 'cal-pnl-neg'}">
               ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}
@@ -74,9 +100,9 @@ const CalendarComponent = (() => {
     }
 
     container.innerHTML = `
-      <div class="cal-card an-card an-card-full" style="margin-top:20px">
+      <div class="cal-card an-card an-card-full cal-card-rounded" style="margin-top:20px">
         <div class="cal-header">
-          <span class="an-card-title">P&L Calendar</span>
+          <span class="an-card-title">Calendar</span>
           <div class="cal-nav">
             <button class="cal-nav-btn" onclick="CalendarComponent.prevMonth('${containerId}')">‹</button>
             <span class="cal-month-label">${monthNames[currentMonth]} ${currentYear}</span>
@@ -102,9 +128,27 @@ const CalendarComponent = (() => {
   function showDayDetail(day) {
     const detail = document.getElementById('cal-day-detail');
     if (!detail) return;
-    const trades = getMonthData(currentYear, currentMonth).dailyTrades[day] || [];
-    const pnl = getMonthData(currentYear, currentMonth).dailyPnl[day] || 0;
-    if (trades.length === 0) { detail.innerHTML = ''; return; }
+    const md = getMonthData(currentYear, currentMonth);
+    const trades = md.dailyTrades[day] || [];
+    const pnl = md.dailyPnl[day] || 0;
+    const ms = md.milestoneByDay[day] || [];
+    if (trades.length === 0 && ms.length === 0) { detail.innerHTML = ''; return; }
+
+    const msBlock = ms.length
+      ? `<div class="cal-milestone-detail">${ms.map(m => `<div class="cal-ms-row"><span class="cal-ms-dot"></span><span>${m.label}</span></div>`).join('')}</div>`
+      : '';
+
+    if (trades.length === 0) {
+      detail.innerHTML = `
+      <div class="cal-detail-inner">
+        <div class="cal-detail-header">
+          <span class="cal-detail-date">${new Date(currentYear, currentMonth, day).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+        </div>
+        ${msBlock}
+      </div>`;
+      detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
 
     detail.innerHTML = `
       <div class="cal-detail-inner">
@@ -112,6 +156,7 @@ const CalendarComponent = (() => {
           <span class="cal-detail-date">${new Date(currentYear, currentMonth, day).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
           <span class="cal-detail-pnl ${pnl >= 0 ? 'grn' : 'red'}">${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}</span>
         </div>
+        ${msBlock}
         <table class="tbl">
           <thead><tr><th>Contract</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L</th></tr></thead>
           <tbody>
@@ -142,5 +187,5 @@ const CalendarComponent = (() => {
     render(containerId);
   }
 
-  return { setTrades, render, showDayDetail, prevMonth, nextMonth };
+  return { setTrades, setMilestones, render, showDayDetail, prevMonth, nextMonth };
 })();

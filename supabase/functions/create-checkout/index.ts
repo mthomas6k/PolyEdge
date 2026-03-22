@@ -60,7 +60,7 @@ serve(async (req) => {
     }
 
     const baseUrl = (body?.success_base_url || "https://mthomas6k.github.io/PolyEdge/").replace(/\/$/, "");
-    const successUrl = `${baseUrl}/?payment=success`;
+    const successUrl = `${baseUrl}/?payment=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${baseUrl}/?payment=cancelled`;
 
     const sessionPayload = {

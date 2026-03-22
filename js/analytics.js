@@ -17,6 +17,22 @@ const PM = (() => {
   let proxyIndex = 0;
 
   async function fetchWithProxy(url, attempt = 0) {
+    const admin = typeof window !== 'undefined' && !!window.__POLYEDGE_IS_ADMIN__;
+    if (admin && attempt === 0) {
+      try {
+        const r = await fetch(url, {
+          headers: { 'x-requested-with': 'XMLHttpRequest' },
+          signal: AbortSignal.timeout(10000)
+        });
+        if (r.ok) {
+          const text = await r.text();
+          if (text && text.trim() !== '') return JSON.parse(text);
+        }
+      } catch (e) {
+        console.warn('Polymarket data-api direct (admin):', e.message);
+      }
+    }
+
     if (attempt >= PROXIES.length) throw new Error('All CORS proxies failed. Try again in a moment.');
     const proxy = PROXIES[(proxyIndex + attempt) % PROXIES.length];
     try {
@@ -121,10 +137,49 @@ const PM = (() => {
       else dayPerf[d] -= cash;
     });
 
+    function mondayKey(ms) {
+      const d = new Date(ms);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const m = new Date(d);
+      m.setDate(diff);
+      m.setHours(0, 0, 0, 0);
+      return m.toISOString().slice(0, 10);
+    }
+
+    const weekBias = {};
+    sorted.forEach(t => {
+      const ts = t.timestamp ? t.timestamp * 1000 : Date.now();
+      const k = mondayKey(ts);
+      if (!weekBias[k]) weekBias[k] = 0;
+      const cash = parseFloat(t.cash || t.usdcSize || 0);
+      if ((t.side || '').toUpperCase() === 'SELL') weekBias[k] += cash;
+      else weekBias[k] -= cash;
+    });
+    const weeklySeries = Object.entries(weekBias)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-14)
+      .map(([weekStart, flow]) => ({ weekStart, flow }));
+
+    let perfTier = 'flat';
+    let perfLabel = 'Breakeven';
+    let perfSub = 'On-chain cash P&amp;L is roughly flat.';
+    const tcp = totalCashPnl;
+    if (tcp > 250 && winRate >= 52) {
+      perfTier = 'great'; perfLabel = 'Strong edge'; perfSub = 'Healthy P&amp;L with solid win rate on resolved books.';
+    } else if (tcp > 50) {
+      perfTier = 'good'; perfLabel = 'Profitable'; perfSub = 'Net positive — keep sizing and liquidity in check.';
+    } else if (tcp < -250) {
+      perfTier = 'bad'; perfLabel = 'Under water'; perfSub = 'Consider risk-down and review recent resolutions.';
+    } else if (tcp < 0) {
+      perfTier = 'weak'; perfLabel = 'Slightly red'; perfSub = 'Small drawdown — watch concentration.';
+    }
+
     return {
       cumPnl, totalRealizedPnl, totalCurrentValue, totalCashPnl, totalInitialValue,
       winRate, won: won.length, lost: closed.length - won.length, totalClosed: closed.length,
       open, closed, best, worst, totalVolume, totalTrades: trades.length, dayPerf, positions: pos,
+      weeklySeries, perfTier, perfLabel, perfSub,
     };
   }
 
@@ -223,7 +278,7 @@ function renderAnalyticsLoading() {
       <div class="an-loading">
         <div class="an-spinner"></div>
         <div class="an-loading-text">Fetching on-chain data<span class="an-dots"></span></div>
-        <div class="an-loading-sub">Querying Polymarket Data API via CORS proxy</div>
+        <div class="an-loading-sub">Querying Polymarket Data API</div>
       </div>
     </div>`;
   let d = 0;
@@ -272,22 +327,34 @@ function renderAnalyticsDashboard(s, wallet) {
   const c = document.getElementById('analytics-content');
   if (!c) return;
   c.innerHTML = `
-    <div class="an-header">
+    <div class="an-header pe-dash-head">
       <div class="an-header-left">
         <div class="an-wallet-badge">
           <span class="an-wallet-dot"></span>
           <span class="an-wallet-addr">${shortWallet}</span>
           <button class="an-change-wallet" onclick="loadAnalytics(true)">change</button>
         </div>
-        <h1 class="an-title">Polymarket Wallet</h1>
-        <p class="an-wallet-separate">On-chain portfolio only—separate from your evaluation, profit targets, and drawdown rules on this platform.</p>
+        <h1 class="an-title">Wallet analytics</h1>
+        <p class="an-wallet-separate">On-chain Polymarket portfolio — separate from your PolyEdge evaluation balance and rules.</p>
       </div>
-      <button class="an-refresh-btn" onclick="fetchAndRenderAnalytics('${wallet}')">
+      <button class="an-refresh-btn an-refresh-btn--r" onclick="fetchAndRenderAnalytics('${wallet}')">
         <span class="an-refresh-icon">↻</span> Refresh
       </button>
     </div>
 
-    <div class="an-kpis">
+    <div class="an-perf-hero pe-card-r pe-tier-${s.perfTier}">
+      <div class="an-perf-copy">
+        <div class="an-perf-kicker">Performance read</div>
+        <h2 class="an-perf-title">${s.perfLabel}</h2>
+        <p class="an-perf-sub">${s.perfSub}</p>
+      </div>
+      <div class="an-perf-stat">
+        <div class="an-perf-big" style="color:${pnlColor}">${pnlSign}$${Math.abs(s.totalCashPnl).toFixed(0)}</div>
+        <div class="an-perf-mini">${s.totalTrades} on-chain fills · ${s.totalClosed} resolved books</div>
+      </div>
+    </div>
+
+    <div class="an-kpis pe-kpis-r">
       <div class="an-kpi" data-tooltip="Total unrealized + realized P&L across all positions">
         <div class="an-kpi-label">Total P&L</div>
         <div class="an-kpi-val" style="color:${pnlColor}">${pnlSign}$${Math.abs(s.totalCashPnl).toFixed(2)}</div>
@@ -315,8 +382,8 @@ function renderAnalyticsDashboard(s, wallet) {
       </div>
     </div>
 
-    <div class="an-grid">
-      <div class="an-card an-card-wide">
+    <div class="an-grid pe-an-grid">
+      <div class="an-card an-card-wide pe-card-r">
         <div class="an-card-header">
           <span class="an-card-title">Cumulative P&amp;L</span>
           <div class="an-chart-legend">
@@ -330,7 +397,7 @@ function renderAnalyticsDashboard(s, wallet) {
         }
       </div>
 
-      <div class="an-card">
+      <div class="an-card pe-card-r">
         <div class="an-card-header"><span class="an-card-title">Win Rate</span></div>
         <div class="an-gauge-wrap">
           <canvas id="gauge-chart" width="220" height="130"></canvas>
@@ -352,12 +419,12 @@ function renderAnalyticsDashboard(s, wallet) {
         </div>
       </div>
 
-      <div class="an-card">
-        <div class="an-card-header"><span class="an-card-title">Day Performance</span></div>
+      <div class="an-card pe-card-r">
+        <div class="an-card-header"><span class="an-card-title">Day-of-week bias</span></div>
         <div class="an-day-bars">${renderDayBars(s.dayPerf)}</div>
       </div>
 
-      <div class="an-card">
+      <div class="an-card pe-card-r">
         <div class="an-card-header"><span class="an-card-title">Best &amp; Worst</span></div>
         ${s.best ? `
           <div class="an-bw-item an-bw-best">
@@ -372,9 +439,21 @@ function renderAnalyticsDashboard(s, wallet) {
             <div class="an-bw-val" style="color:var(--red)">$${parseFloat(s.worst.cashPnl).toFixed(2)}</div>
           </div>` : '<div class="an-empty-state">No closed positions yet</div>'}
       </div>
+
+      <div class="an-card an-card-wide pe-card-r" style="grid-column:1 / -1">
+        <div class="an-card-header">
+          <span class="an-card-title">Weekly flow</span>
+          <span class="an-badge">FundingPips-style bias</span>
+        </div>
+        <p class="an-week-hint">Each bar is net USDC flow for trades grouped by week (Mon–Sun). Use it to see when you lean risk-on vs risk-off.</p>
+        ${s.weeklySeries && s.weeklySeries.length
+          ? '<div class="an-chart-wrap an-chart-tall"><canvas id="week-bias-chart"></canvas></div>'
+          : '<div class="an-empty-chart">Need more trade history to chart weeks</div>'
+        }
+      </div>
     </div>
 
-    <div class="an-card an-card-full" style="margin-top:20px">
+    <div class="an-card an-card-full pe-card-r" style="margin-top:20px">
       <div class="an-card-header">
         <span class="an-card-title">Open Positions</span>
         <span class="an-badge">${s.open.length} Active</span>
@@ -422,8 +501,8 @@ function renderAnalyticsDashboard(s, wallet) {
   requestAnimationFrame(() => {
     if (s.cumPnl.length > 0) drawPnlChart(s.cumPnl);
     drawGauge(s.winRate);
+    if (s.weeklySeries && s.weeklySeries.length) drawWeekBiasChart(s.weeklySeries);
     initTooltips();
-    // Load calendar with closed trades from the active evaluation
     loadAnalyticsCalendar();
   });
 }
@@ -439,11 +518,17 @@ async function loadAnalyticsCalendar() {
         .eq('status', 'closed')
         .order('closed_at', { ascending: false });
       CalendarComponent.setTrades(trades || []);
+      CalendarComponent.setMilestones([
+        { at: selectedAccount.expires_at, label: 'Eval deadline', kind: 'deadline' },
+        ...(selectedAccount.created_at ? [{ at: selectedAccount.created_at, label: 'Eval started', kind: 'start' }] : [])
+      ]);
     } else {
       CalendarComponent.setTrades([]);
+      CalendarComponent.setMilestones([]);
     }
   } else {
     CalendarComponent.setTrades([]);
+    CalendarComponent.setMilestones([]);
   }
   CalendarComponent.render('analytics-calendar');
 }
@@ -546,6 +631,60 @@ function drawPnlChart(cumPnl) {
   ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
   ctx.fillStyle = lineColor;
   ctx.fill();
+}
+
+function drawWeekBiasChart(series) {
+  const canvas = document.getElementById('week-bias-chart');
+  if (!canvas || !series || !series.length) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth || canvas.offsetWidth || 600;
+  const H = 200;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+
+  const vals = series.map(x => x.flow);
+  const labels = series.map(x => x.weekStart.slice(5));
+  const min = Math.min(...vals, 0);
+  const max = Math.max(...vals, 0);
+  const range = Math.max(max - min, 1);
+  const pad = { t: 16, r: 12, b: 36, l: 44 };
+  const w = W - pad.l - pad.r;
+  const h = H - pad.t - pad.b;
+  const n = vals.length;
+  const bw = w / Math.max(n, 1);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fillRect(pad.l, pad.t, w, h);
+
+  const zeroY = pad.t + (1 - (0 - min) / range) * h;
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, zeroY);
+  ctx.lineTo(pad.l + w, zeroY);
+  ctx.stroke();
+
+  vals.forEach((v, i) => {
+    const x = pad.l + i * bw + bw * 0.15;
+    const barW = bw * 0.7;
+    const y0 = pad.t + (1 - (Math.max(0, v) - min) / range) * h;
+    const y1 = pad.t + (1 - (Math.min(0, v) - min) / range) * h;
+    const top = Math.min(y0, y1);
+    const bh = Math.max(Math.abs(y1 - y0), 2);
+    ctx.fillStyle = v >= 0 ? 'rgba(61,214,138,0.75)' : 'rgba(232,85,85,0.65)';
+    ctx.fillRect(x, top, barW, bh);
+  });
+
+  ctx.font = "10px system-ui, sans-serif";
+  ctx.fillStyle = '#6a7a9a';
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(n / 8));
+  for (let i = 0; i < n; i += step) {
+    ctx.fillText(labels[i], pad.l + i * bw + bw / 2, H - 10);
+  }
 }
 
 function drawGauge(winRate) {

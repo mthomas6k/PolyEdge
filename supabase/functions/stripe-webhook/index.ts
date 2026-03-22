@@ -51,6 +51,21 @@ serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+  const sessionId = session.id || null;
+
+  if (sessionId) {
+    const { data: existing } = await supabase
+      .from("evaluations")
+      .select("id")
+      .eq("stripe_checkout_session_id", sessionId)
+      .maybeSingle();
+    if (existing?.id) {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
+
   const { error } = await supabase.from("evaluations").insert({
     user_id: userId,
     eval_type: evalType,
@@ -69,6 +84,7 @@ serve(async (req) => {
     total_loss: 0,
     largest_trade_profit: 0,
     expires_at: expiresAt,
+    stripe_checkout_session_id: sessionId,
   });
 
   if (error) {
