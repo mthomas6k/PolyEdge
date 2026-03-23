@@ -9,6 +9,8 @@ const CalendarComponent = (() => {
   let closedTrades = [];
   /** @type {{ date: string, pnl: number }[]} — Polymarket wallet: net activity P&amp;L by day */
   let walletDailyRows = [];
+  /** @type {Record<string, { title: string, side: string, signedUsd: number, absUsd: number }[]> | null} */
+  let walletActivityByDay = null;
   /** @type {{ at: string, label: string, kind?: string }[]} */
   let milestones = [];
 
@@ -19,6 +21,11 @@ const CalendarComponent = (() => {
   /** When set, calendar uses on-chain daily net instead of evaluation trades */
   function setWalletDaily(rows) {
     walletDailyRows = Array.isArray(rows) ? rows.filter(r => r && r.date) : [];
+  }
+
+  /** Fills per calendar day (YYYY-MM-DD) for wallet mode — from Polymarket activity */
+  function setWalletActivityByDay(map) {
+    walletActivityByDay = map && typeof map === 'object' ? map : null;
   }
 
   function setMilestones(list) {
@@ -39,7 +46,20 @@ const CalendarComponent = (() => {
           const amt = parseFloat(row.pnl || 0);
           if (!dailyPnl[day]) { dailyPnl[day] = 0; dailyTrades[day] = []; }
           dailyPnl[day] += amt;
-          dailyTrades[day].push({ contract_name: 'On-chain net flow', side: '—', pnl: amt, walletDay: true });
+          const iso = String(row.date).slice(0, 10);
+          const legs = walletActivityByDay && walletActivityByDay[iso];
+          if (legs && legs.length) {
+            legs.forEach(tr => {
+              dailyTrades[day].push({
+                contract_name: tr.title || 'Trade',
+                side: tr.side || '—',
+                pnl: tr.signedUsd,
+                walletFills: true,
+              });
+            });
+          } else {
+            dailyTrades[day].push({ contract_name: 'Net flow (no fill breakdown)', side: '—', pnl: amt, walletDay: true });
+          }
         }
       });
     } else {
@@ -180,9 +200,14 @@ const CalendarComponent = (() => {
         </div>
         ${msBlock}
         <table class="tbl">
-          <thead><tr>${trades[0] && trades[0].walletDay ? '<th>Source</th><th>P&amp;L</th>' : '<th>Contract</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L</th>'}</tr></thead>
+          <thead><tr>${trades[0] && trades[0].walletFills ? '<th>Market / leg</th><th>Side</th><th>USDC (signed)</th>' : trades[0] && trades[0].walletDay ? '<th>Source</th><th>P&amp;L</th>' : '<th>Contract</th><th>Side</th><th>Entry</th><th>Exit</th><th>P&L</th>'}</tr></thead>
           <tbody>
-            ${trades.map(t => t.walletDay ? `
+            ${trades.map(t => t.walletFills ? `
+              <tr>
+                <td>${t.contract_name || '—'}</td>
+                <td>${t.side || '—'}</td>
+                <td class="${t.pnl >= 0 ? 'pgrn' : 'pred'}">${t.pnl >= 0 ? '+' : ''}$${Number(t.pnl).toFixed(2)}</td>
+              </tr>` : t.walletDay ? `
               <tr>
                 <td>${t.contract_name || '—'}</td>
                 <td class="${t.pnl >= 0 ? 'pgrn' : 'pred'}">${t.pnl >= 0 ? '+' : ''}$${Number(t.pnl).toFixed(2)}</td>
@@ -213,5 +238,5 @@ const CalendarComponent = (() => {
     render(containerId);
   }
 
-  return { setTrades, setWalletDaily, setMilestones, render, showDayDetail, prevMonth, nextMonth };
+  return { setTrades, setWalletDaily, setWalletActivityByDay, setMilestones, render, showDayDetail, prevMonth, nextMonth };
 })();
