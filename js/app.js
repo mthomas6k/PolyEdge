@@ -57,6 +57,22 @@ async function checkSession() {
       currentUser = session.user;
       await loadProfile();
       updateAuthUI(true);
+      if (window.__POLYEDGE_IS_ADMIN__) {
+        if (!window.__adminMarketCacheInterval && typeof PolymarketService !== 'undefined' && PolymarketService.fetchAllMarkets) {
+          window.__adminMarketCacheInterval = setInterval(async () => {
+            if (!window.__POLYEDGE_IS_ADMIN__) return;
+            try {
+              await PolymarketService.fetchAllMarkets(true);
+            } catch (e) {
+              console.warn('Admin market cache refresh failed:', e);
+            }
+          }, 90000);
+        }
+        if (!window.__adminMarketCachePrimed && typeof PolymarketService !== 'undefined' && PolymarketService.fetchAllMarkets) {
+          window.__adminMarketCachePrimed = true;
+          PolymarketService.fetchAllMarkets(true).catch(e => console.warn('Admin market cache prime failed:', e));
+        }
+      }
       // Load accounts after auth
       await AccountManager.loadAccounts();
       AccountManager.restoreSelection();
@@ -79,6 +95,14 @@ async function loadProfile() {
 }
 
 function updateAuthUI(loggedIn) {
+  if (!loggedIn) {
+    if (window.__adminMarketCacheInterval) {
+      clearInterval(window.__adminMarketCacheInterval);
+      window.__adminMarketCacheInterval = null;
+    }
+    window.__adminMarketCachePrimed = false;
+  }
+
   const prevAdmin = window.__POLYEDGE_IS_ADMIN__;
   window.__POLYEDGE_IS_ADMIN__ = !!(loggedIn && currentProfile && currentProfile.is_admin);
   if (window.__POLYEDGE_IS_ADMIN__ && !prevAdmin && typeof PolymarketService !== 'undefined' && PolymarketService.invalidateMarketsCache) {

@@ -23,6 +23,8 @@ This will:
 
 If you see errors like “policy already exists”, you may have run the script before. Either drop existing policies with the same names in the SQL Editor and run again, or skip the duplicate policy creation.
 
+**Shared markets cache:** run **`supabase/migrations/20250324120000_market_cache.sql`** in the SQL Editor. It adds `public.market_cache` (public read, admin-only write via `profiles.is_admin`). Sign in once as an admin so the row is populated; other users then load markets from Supabase instead of `gamma-proxy`.
+
 ---
 
 ## 2. Ensure profiles exist for each user (trigger)

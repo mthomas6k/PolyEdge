@@ -1,7 +1,8 @@
 // ==========================================
 // POLYMARKET SERVICE — Gamma API
-// - Admin: direct gamma-api first (fast), then gamma-proxy, then public proxies
-// - Non-admin: gamma-proxy only (no public CORS proxies)
+// - Shared cache: `market_cache` Supabase table (see supabase/migrations/*market_cache.sql).
+// - Non-admin: reads that table only (no Gamma / gamma-proxy for bulk markets).
+// - Admin: paginates Gamma, writes cache for everyone (user JWT + RLS is_admin).
 // Deploy gamma-proxy: supabase functions deploy gamma-proxy --no-verify-jwt
 // ==========================================
 
@@ -19,6 +20,8 @@ const PolymarketService = (() => {
   let proxyIndex = 0;
   let fullCache = { list: [], ts: 0 };
   const CACHE_TTL_MS = 90000;
+  /** Prefer shared row if newer than this (admin refreshes on a timer) */
+  const SHARED_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 
   function invalidateMarketsCache() {
     fullCache = { list: [], ts: 0 };
@@ -54,6 +57,123 @@ const PolymarketService = (() => {
     return typeof window !== 'undefined' && window.POLYEDGE_CONFIG
       ? window.POLYEDGE_CONFIG
       : {};
+  }
+
+  function abortAfter(ms) {
+    try {
+      if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+        return AbortSignal.timeout(ms);
+      }
+    } catch (e) { /* ignore */ }
+    const c = new AbortController();
+    setTimeout(() => c.abort(), ms);
+    return c.signal;
+  }
+
+  function supabaseRestBase() {
+    const { SUPABASE_URL } = config();
+    const base = (SUPABASE_URL || '').replace(/\/$/, '');
+    return base || '';
+  }
+
+  function supabaseAnonHeaders() {
+    const key = config().SUPABASE_ANON_KEY || '';
+    if (!key) return null;
+    return {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+    };
+  }
+
+  /** User JWT + anon apikey — required for RLS admin write on market_cache */
+  async function supabaseUserHeaders() {
+    const key = config().SUPABASE_ANON_KEY || '';
+    if (!key) return null;
+    try {
+      if (typeof window !== 'undefined' && typeof sb !== 'undefined' && sb && sb.auth) {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session && session.access_token) {
+          return {
+            apikey: key,
+            Authorization: `Bearer ${session.access_token}`,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('supabaseUserHeaders:', e.message);
+    }
+    return null;
+  }
+
+  /**
+   * Read shared markets JSON from Supabase (public SELECT).
+   * @returns {any[]|null} null if missing/error; [] if empty row
+   */
+  async function readSupabaseCache() {
+    const base = supabaseRestBase();
+    const h = supabaseAnonHeaders();
+    if (!base || !h) return null;
+    try {
+      const r = await fetch(
+        `${base}/rest/v1/market_cache?id=eq.singleton&select=data,updated_at`,
+        { headers: h, signal: abortAfter(12000) }
+      );
+      if (!r.ok) return null;
+      const rows = await r.json();
+      if (!rows || !rows[0]) return null;
+      const raw = rows[0].data;
+      const list = Array.isArray(raw) ? raw : [];
+      const updatedAt = rows[0].updated_at ? new Date(rows[0].updated_at).getTime() : 0;
+      const age = Date.now() - updatedAt;
+      if (list.length > 0 && age > SHARED_CACHE_MAX_AGE_MS) {
+        console.warn('market_cache is stale (>15m). Ask an admin to open the site while signed in.');
+      }
+      return list;
+    } catch (e) {
+      console.warn('readSupabaseCache:', e.message);
+      return null;
+    }
+  }
+
+  /** Persist full market list for non-admin clients (admin session only; RLS). */
+  async function writeSupabaseCache(markets) {
+    const base = supabaseRestBase();
+    const userH = await supabaseUserHeaders();
+    if (!base || !userH || !Array.isArray(markets)) return;
+    const body = JSON.stringify({
+      data: markets,
+      updated_at: new Date().toISOString(),
+    });
+    const jsonHeaders = {
+      ...userH,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    };
+    try {
+      const patch = await fetch(`${base}/rest/v1/market_cache?id=eq.singleton`, {
+        method: 'PATCH',
+        headers: jsonHeaders,
+        body,
+        signal: abortAfter(60000),
+      });
+      if (patch.ok) return;
+      const ins = await fetch(`${base}/rest/v1/market_cache`, {
+        method: 'POST',
+        headers: {
+          ...jsonHeaders,
+          Prefer: 'return=minimal,resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          id: 'singleton',
+          data: markets,
+          updated_at: new Date().toISOString(),
+        }),
+        signal: abortAfter(60000),
+      });
+      if (!ins.ok) console.warn('writeSupabaseCache:', patch.status, ins.status);
+    } catch (e) {
+      console.warn('writeSupabaseCache failed:', e.message);
+    }
   }
 
   /**
@@ -141,6 +261,17 @@ const PolymarketService = (() => {
       return fullCache.list;
     }
 
+    if (!isPolyEdgeAdmin()) {
+      const cached = await readSupabaseCache();
+      if (cached && cached.length > 0) {
+        fullCache = { list: cached, ts: now };
+        return cached;
+      }
+      throw new Error(
+        'Markets are still syncing. An admin needs to sign in once so the shared catalog can populate — then refresh.'
+      );
+    }
+
     const all = [];
     let offset = 0;
 
@@ -160,6 +291,9 @@ const PolymarketService = (() => {
     }
 
     fullCache = { list: all, ts: now };
+    if (all.length > 0) {
+      await writeSupabaseCache(all);
+    }
     return all;
   }
 
