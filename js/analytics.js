@@ -62,7 +62,7 @@ const PM = (() => {
 
   async function getActivity(wallet) {
     try {
-      const data = await fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=2000&type=TRADE`);
+      const data = await fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=3000`);
       return Array.isArray(data) ? data : [];
     } catch (e) {
       console.warn('getActivity failed:', e);
@@ -117,7 +117,7 @@ const PM = (() => {
     const positionDisplaySize = positionDisplaySizeRow;
     const positionDisplayValue = positionDisplayValueRow;
 
-    const trades = (activity || []).filter(a => a.type === 'TRADE' || a.side);
+    const trades = (activity || []).filter(a => ['TRADE', 'REDEEM', 'MAKER_REBATE'].includes(a.type) || a.side);
 
     const dailyPnl = {};
     const activityByDay = {};
@@ -129,14 +129,21 @@ const PM = (() => {
       if (!dailyPnl[day]) dailyPnl[day] = 0;
       const cash = n(t, 'cash', 'usdcSize', 'usdc_size', 'amount');
       const side = (t.side || '').toUpperCase();
-      if (side === 'SELL') dailyPnl[day] += cash;
+      
+      const isCashIn = side === 'SELL' || t.type === 'REDEEM' || t.type === 'MAKER_REBATE';
+      if (isCashIn) dailyPnl[day] += cash;
       else if (side === 'BUY') dailyPnl[day] -= cash;
 
       if (!activityByDay[day]) activityByDay[day] = [];
+      
+      let displaySide = side || '—';
+      if (t.type === 'REDEEM') displaySide = 'REDEEM';
+      if (t.type === 'MAKER_REBATE') displaySide = 'REBATE';
+
       activityByDay[day].push({
         title: t.title || t.slug || t.market || t.conditionId || 'Trade',
-        side: t.side || '—',
-        signedUsd: side === 'SELL' ? cash : (side === 'BUY' ? -cash : 0),
+        side: displaySide,
+        signedUsd: isCashIn ? cash : (side === 'BUY' ? -cash : 0),
         absUsd: Math.abs(cash),
         outcome: t.outcome || '',
       });
@@ -204,7 +211,9 @@ const PM = (() => {
     const top3Best = sortedByPnlDesc.filter(p => positionTotalPnl(p) > 0).slice(0, 3);
     const top3Worst = sortedByPnlAsc.filter(p => positionTotalPnl(p) < 0).slice(0, 3);
 
-    const totalVolume = trades.reduce((s, t) => s + Math.abs(n(t, 'cash', 'usdcSize', 'usdc_size', 'amount')), 0);
+    const totalVolume = trades.reduce((s, t) => {
+      return (t.type === 'TRADE' || t.side) ? s + Math.abs(n(t, 'cash', 'usdcSize', 'usdc_size', 'amount')) : s;
+    }, 0);
 
     const dayPerf = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -212,8 +221,10 @@ const PM = (() => {
       const ts = t.timestamp ? t.timestamp * 1000 : Date.now();
       const d = dayNames[new Date(ts).getDay()];
       const cash = n(t, 'cash', 'usdcSize', 'usdc_size', 'amount');
-      if ((t.side || '').toUpperCase() === 'SELL') dayPerf[d] += cash;
-      else dayPerf[d] -= cash;
+      const side = (t.side || '').toUpperCase();
+      const isCashIn = side === 'SELL' || t.type === 'REDEEM' || t.type === 'MAKER_REBATE';
+      if (isCashIn) dayPerf[d] += cash;
+      else if (side === 'BUY') dayPerf[d] -= cash;
     });
 
     function mondayKeyFromDateStr(dateStr) {
