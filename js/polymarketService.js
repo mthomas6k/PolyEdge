@@ -12,6 +12,7 @@ const PolymarketService = (() => {
   const MAX_MARKETS = 600;
 
   const PROXIES = [
+    (url) => `/api/pm-proxy?url=${encodeURIComponent(url)}`,
     (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,

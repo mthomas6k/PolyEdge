@@ -5,6 +5,7 @@
 
 const PM = (() => {
   const PROXIES = [
+    (url) => `/api/pm-proxy?url=${encodeURIComponent(url)}`,
     (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url) => `https://proxy.cors.sh/${url}`,
