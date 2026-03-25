@@ -212,13 +212,8 @@ const PolymarketService = (() => {
       }
     }
 
-    if (admin) {
-      return fetchViaPublicProxies(`${GAMMA_API}/${path}`);
-    }
-
-    throw new Error(
-      'Markets could not be loaded. Deploy the gamma-proxy Supabase function or sign in with an admin account.'
-    );
+    console.warn("Falling back to public CORS proxies...");
+    return fetchViaPublicProxies(`${GAMMA_API}/${path}`);
   }
 
   async function fetchViaPublicProxies(fullUrl, attempt = 0) {
@@ -267,9 +262,7 @@ const PolymarketService = (() => {
         fullCache = { list: cached, ts: now };
         return cached;
       }
-      throw new Error(
-        'Markets are still syncing. An admin needs to sign in once so the shared catalog can populate — then refresh.'
-      );
+      console.warn("Shared cache empty; falling back to CORS proxy for non-admin...");
     }
 
     const all = [];
