@@ -1519,7 +1519,7 @@ function expandPosition(row) {
   expand.innerHTML = `<td colspan="8" class="an-expand-cell">
     <div class="an-expand-content">
       <strong>${title}</strong>
-      ${slug ? `<a href="https://polymarket.com/event/${slug}" target="_blank" class="an-poly-link">View on Polymarket →</a>` : ''}
+      ${title ? `<a href="https://polymarket.com/predictions?query=${encodeURIComponent(title)}" target="_blank" class="an-poly-link">Search on Polymarket →</a>` : ''}
     </div>
   </td>`;
   row.parentNode.insertBefore(expand, row.nextSibling);

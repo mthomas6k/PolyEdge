@@ -380,7 +380,7 @@ function renderPmCard(m, canBet, idx) {
   const pct = yesP;
   const slug = pm.slug || '';
   const uid = pmHashStr(slug + idx) % 100000;
-  const polyUrl = slug ? `https://polymarket.com/event/${encodeURIComponent(slug)}` : 'https://polymarket.com';
+  const polyUrl = pm.question ? `https://polymarket.com/predictions?query=${encodeURIComponent(pm.question)}` : 'https://polymarket.com';
   const img = pm.image
     ? `<img class="pm-card-img" src="${String(pm.image).replace(/"/g, '&quot;')}" alt="" loading="lazy" onerror="this.style.display='none'">`
     : `<div class="pm-card-img pm-card-img-ph">◆</div>`;
@@ -425,7 +425,7 @@ function renderFeaturedCard(m, canBet, idx) {
   const noP = Math.round(pm.noPrice * 100);
   const slug = pm.slug || '';
   const uid = pmHashStr('feat' + slug) % 100000;
-  const polyUrl = slug ? `https://polymarket.com/event/${encodeURIComponent(slug)}` : 'https://polymarket.com';
+  const polyUrl = pm.question ? `https://polymarket.com/predictions?query=${encodeURIComponent(pm.question)}` : 'https://polymarket.com';
   const dis = canBet ? '' : ' disabled';
   const onY = canBet ? `onclick="openMarketBetByIdx(${idx},'YES')"` : '';
   const onN = canBet ? `onclick="openMarketBetByIdx(${idx},'NO')"` : '';
