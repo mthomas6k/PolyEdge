@@ -63,8 +63,18 @@ const PM = (() => {
 
   async function getActivity(wallet) {
     try {
-      const data = await fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=3000`);
-      return Array.isArray(data) ? data : [];
+      let allActivities = [];
+      let offset = 0;
+      const limit = 1000;
+      while (true) {
+        const data = await fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=${limit}&offset=${offset}`);
+        if (!Array.isArray(data) || data.length === 0) break;
+        allActivities = allActivities.concat(data);
+        if (data.length < limit) break; // Finished all pages
+        offset += limit;
+        if (offset >= 10000) break; // Hard cap at 10,000 to prevent infinite loops / browser freezing
+      }
+      return allActivities;
     } catch (e) {
       console.warn('getActivity failed:', e);
       return [];
@@ -201,16 +211,44 @@ const PM = (() => {
     );
 
     const allPositionsListed = pos.filter(p => {
-      const sz = positionDisplaySize(p);
+      const sz = positionDisplaySizeRow(p);
       const pr = n(p, 'curPrice', 'cur_price');
       const isClosed = p.redeemable || pr <= 0.01 || pr >= 0.99;
       return sz > 0 || isClosed;
     });
 
-    const sortedByPnlDesc = [...pos].sort((a, b) => positionTotalPnl(b) - positionTotalPnl(a));
-    const sortedByPnlAsc = [...pos].sort((a, b) => positionTotalPnl(a) - positionTotalPnl(b));
-    const best = sortedByPnlDesc.find(p => positionTotalPnl(p) > 0) || null;
-    const worst = sortedByPnlAsc.find(p => positionTotalPnl(p) < 0) || null;
+    // Reconstruct exhaustive best/worst market P&L across all historical trades
+    // since the standard `pos` array drops redeemed massive wins.
+    const pnlByCondition = {};
+    trades.forEach(t => {
+      const cid = t.conditionId || t.asset || t.title;
+      if (!cid) return;
+      if (!pnlByCondition[cid]) {
+        pnlByCondition[cid] = { id: cid, title: t.title || t.slug || t.market || 'Unknown Market', net: 0, size: 0, outcome: t.outcome || '' };
+      }
+      const cash = n(t, 'cash', 'usdcSize', 'usdc_size', 'amount');
+      const side = (t.side || '').toUpperCase();
+      const isCashIn = side === 'SELL' || t.type === 'REDEEM' || t.type === 'MAKER_REBATE';
+      if (isCashIn) pnlByCondition[cid].net += cash;
+      else if (side === 'BUY') pnlByCondition[cid].net -= cash;
+      
+      const sz = n(t, 'size', 'numShares', 'num_shares');
+      if (sz > pnlByCondition[cid].size) pnlByCondition[cid].size = sz;
+    });
+
+    // Add mark-to-market unrealized value of still-open positions to complete the exact P&L
+    pos.forEach(p => {
+      const cid = p.conditionId || p.asset || p.title;
+      if (!cid || !pnlByCondition[cid]) return;
+      pnlByCondition[cid].net += n(p, 'currentValue', 'current_value');
+    });
+
+    const allMarketsPnl = Object.values(pnlByCondition).sort((a, b) => b.net - a.net);
+    const bestFake = allMarketsPnl.length > 0 && allMarketsPnl[0].net > 0 ? allMarketsPnl[0] : null;
+    const worstFake = allMarketsPnl.length > 0 && allMarketsPnl[allMarketsPnl.length - 1].net < 0 ? allMarketsPnl[allMarketsPnl.length - 1] : null;
+
+    const best = bestFake ? { title: bestFake.title, outcome: bestFake.outcome, size: bestFake.size, realizedPnl: bestFake.net, cashPnl: 0, currentValue: 0 } : null;
+    const worst = worstFake ? { title: worstFake.title, outcome: worstFake.outcome, size: worstFake.size, realizedPnl: worstFake.net, cashPnl: 0, currentValue: 0 } : null;
 
     const top3Best = sortedByPnlDesc.filter(p => positionTotalPnl(p) > 0).slice(0, 3);
     const top3Worst = sortedByPnlAsc.filter(p => positionTotalPnl(p) < 0).slice(0, 3);
