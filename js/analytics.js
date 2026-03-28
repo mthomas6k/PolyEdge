@@ -165,20 +165,31 @@ const PM = (() => {
     const totalRealizedPnl = pos.reduce((s, p) => s + n(p, 'realizedPnl', 'realized_pnl'), 0);
     const totalCurrentValue = pos.reduce((s, p) => s + n(p, 'currentValue', 'current_value'), 0);
     const totalCashPnlFieldOnly = pos.reduce((s, p) => s + n(p, 'cashPnl', 'cash_pnl'), 0);
-    /** Σ(realizedPnl + cashPnl) — aligns much closer to polymarket.com profile P&amp;L than cashPnl alone */
-    const totalCashPnl = pos.reduce((s, p) => s + positionTotalPnl(p), 0);
+    /** Final point of cumulative activity P&L gives accurate total since positions API drops redeemed wins. */
+    const totalCashPnl = cumPnl.length > 0 ? cumPnl[cumPnl.length - 1].pnl : 0;
     const totalInitialValue = pos.reduce((s, p) => s + n(p, 'initialValue', 'initial_value'), 0);
 
-    // CLOSED positions — resolved markets only
-    const closed = pos.filter(p => {
+    // Win Rate — rebuilt using activity since positions API hides redeemed wins
+    const wonConditionIds = new Set(trades.filter(t => t.type === 'REDEEM' && t.conditionId).map(t => t.conditionId));
+    
+    // Also include any active positions that are currently winning and closed (but unredeemed)
+    const unredeemedWins = pos.filter(p => {
       const price = n(p, 'curPrice', 'cur_price');
-      return p.redeemable || price <= 0.01 || price >= 0.99;
+      return !wonConditionIds.has(p.conditionId) && (positionTotalPnlRow(p) > 0) && (p.redeemable || price >= 0.99);
     });
-    const won = closed.filter(p => {
+    const totalWon = wonConditionIds.size + unredeemedWins.length;
+
+    // Remaining positions that are closed and worth ~0 are losses
+    const lostPositions = pos.filter(p => {
       const price = n(p, 'curPrice', 'cur_price');
-      return price >= 0.99 || positionTotalPnl(p) > 0;
+      const isClosed = p.redeemable || price <= 0.01;
+      return isClosed && !unredeemedWins.includes(p) && n(p, 'currentValue', 'current_value') <= 0.01;
     });
-    const winRate = closed.length > 0 ? (won.length / closed.length * 100) : 0;
+    const totalLost = lostPositions.length;
+    
+    const combinedClosed = totalWon + totalLost;
+    const winRate = combinedClosed > 0 ? (totalWon / combinedClosed * 100) : 0;
+    const closed = lostPositions.concat(unredeemedWins);
 
     // OPEN positions — include edge cases Polymarket still lists as active
     const open = pos.filter(p => {
@@ -324,9 +335,9 @@ const PM = (() => {
       totalCashPnlFieldOnly,
       totalInitialValue,
       winRate,
-      won: won.length,
-      lost: closed.length - won.length,
-      totalClosed: closed.length,
+      won: totalWon,
+      lost: totalLost,
+      totalClosed: combinedClosed,
       open,
       openStrict,
       allPositionsListed,
@@ -752,7 +763,7 @@ function renderAnalyticsDashboard(s, wallet) {
       <div class="an-kpi pe-kpi-g" data-tooltip="Per position: realizedPnl + cashPnl, then summed. This usually tracks Polymarket profile P&amp;L much better than cashPnl alone.">
         <div class="an-kpi-label">Total P&amp;L</div>
         <div class="an-kpi-val" style="color:${pnlColor}">${formatSignedUsd(s.totalCashPnl)}</div>
-        <div class="an-kpi-sub">realized + cash (per row)</div>
+        <div class="an-kpi-sub">net cashflow (from activity)</div>
       </div>
       <div class="an-kpi pe-kpi-g" data-tooltip="Sum of realizedPnl across all position rows from the API.">
         <div class="an-kpi-label">Realized P&amp;L</div>
