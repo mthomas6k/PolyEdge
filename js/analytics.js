@@ -191,16 +191,8 @@ const PM = (() => {
     const winRate = combinedClosed > 0 ? (totalWon / combinedClosed * 100) : 0;
     const closed = lostPositions.concat(unredeemedWins);
 
-    // OPEN positions — include edge cases Polymarket still lists as active
-    const open = pos.filter(p => {
-      if (p.redeemable) return false;
-      const c = n(p, 'curPrice', 'cur_price');
-      const s = positionDisplaySize(p);
-      const v = n(p, 'currentValue', 'current_value');
-      if (s <= 0) return false;
-      const inSpread = c > 0.001 && c < 0.999;
-      return inSpread || v > 0.01;
-    });
+    // OPEN positions (Active) — Polymarket includes all positions where you hold shares, even if 0¢ or resolved.
+    const open = pos.filter(p => positionDisplaySizeRow(p) >= 0.00001);
 
     const openStrict = pos.filter(p =>
       !p.redeemable &&
@@ -873,14 +865,14 @@ function renderAnalyticsDashboard(s, wallet) {
         <div class="pe-seg">
           <button type="button" class="pe-seg-btn pe-pos-tab active" data-tab="active" onclick="pmSwitchPosTab('active')">Active (${s.open.length})</button>
           <button type="button" class="pe-seg-btn pe-pos-tab" data-tab="all" onclick="pmSwitchPosTab('all')">All (${s.allPositionsListed.length})</button>
-          <button type="button" class="pe-seg-btn pe-pos-tab" data-tab="closed" onclick="pmSwitchPosTab('closed')">Resolved (${s.closed.length})</button>
+          <button type="button" class="pe-seg-btn pe-pos-tab" data-tab="closed" onclick="pmSwitchPosTab('closed')">Closed (${s.closed.length})</button>
         </div>
       </div>
       <div class="an-table-wrap pe-table-round">
         <table class="an-table">
           <thead><tr>
             <th>Market</th><th>Outcome</th><th>Cur</th><th>Avg</th>
-            <th>Size</th><th>Value</th><th>P&amp;L</th><th>%</th>
+            <th>Shares</th><th>Value</th><th>P&amp;L</th><th>%</th>
           </tr></thead>
           <tbody id="pm-pos-tbody"></tbody>
         </table>
