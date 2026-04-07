@@ -64,15 +64,23 @@ const PM = (() => {
   async function getActivity(wallet) {
     try {
       let allActivities = [];
-      let offset = 0;
       const limit = 1000;
-      while (true) {
-        const data = await fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=${limit}&offset=${offset}`);
-        if (!Array.isArray(data) || data.length === 0) break;
-        allActivities = allActivities.concat(data);
-        if (data.length < limit) break; // Finished all pages
-        offset += limit;
-        if (offset >= 10000) break; // Hard cap at 10,000 to prevent infinite loops / browser freezing
+      
+      const firstChunk = await fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=${limit}&offset=0`);
+      if (!Array.isArray(firstChunk) || firstChunk.length === 0) return [];
+      allActivities = allActivities.concat(firstChunk);
+      
+      if (firstChunk.length === limit) {
+        const promises = [];
+        for (let i = 1; i < 10; i++) {
+          promises.push(fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=${limit}&offset=${i * limit}`).catch(() => []));
+        }
+        const results = await Promise.all(promises);
+        for (const data of results) {
+          if (!Array.isArray(data) || data.length === 0) break;
+          allActivities = allActivities.concat(data);
+          if (data.length < limit) break;
+        }
       }
       return allActivities;
     } catch (e) {
@@ -244,16 +252,16 @@ const PM = (() => {
     });
 
     const allMarketsPnl = Object.values(pnlByCondition).sort((a, b) => b.net - a.net);
-    const bestFake = allMarketsPnl.length > 0 && allMarketsPnl[0].net > 0 ? allMarketsPnl[0] : null;
-    const worstFake = allMarketsPnl.length > 0 && allMarketsPnl[allMarketsPnl.length - 1].net < 0 ? allMarketsPnl[allMarketsPnl.length - 1] : null;
+    const top3BestFake = allMarketsPnl.filter(x => x.net > 0).slice(0, 3);
+    const top3WorstFake = [...allMarketsPnl].reverse().filter(x => x.net < 0).slice(0, 3);
 
-    const best = bestFake ? { title: bestFake.title, outcome: bestFake.outcome, size: bestFake.size, realizedPnl: bestFake.net, cashPnl: 0, currentValue: 0 } : null;
-    const worst = worstFake ? { title: worstFake.title, outcome: worstFake.outcome, size: worstFake.size, realizedPnl: worstFake.net, cashPnl: 0, currentValue: 0 } : null;
+    const mapFake = (x) => ({ title: x.title, outcome: x.outcome, size: x.size, realizedPnl: x.net, cashPnl: 0, currentValue: 0, curPrice: 0, avgPrice: 0 });
 
-    const sortedByPnlDesc = [...pos].sort((a, b) => positionTotalPnl(b) - positionTotalPnl(a));
-    const sortedByPnlAsc  = [...pos].sort((a, b) => positionTotalPnl(a) - positionTotalPnl(b));
-    const top3Best = sortedByPnlDesc.filter(p => positionTotalPnl(p) > 0).slice(0, 3);
-    const top3Worst = sortedByPnlAsc.filter(p => positionTotalPnl(p) < 0).slice(0, 3);
+    const best = top3BestFake.length > 0 ? mapFake(top3BestFake[0]) : null;
+    const worst = top3WorstFake.length > 0 ? mapFake(top3WorstFake[0]) : null;
+
+    const top3Best = top3BestFake.map(mapFake);
+    const top3Worst = top3WorstFake.map(mapFake);
 
     const totalVolume = trades.reduce((s, t) => {
       return (t.type === 'TRADE' || t.side) ? s + Math.abs(n(t, 'cash', 'usdcSize', 'usdc_size', 'amount')) : s;

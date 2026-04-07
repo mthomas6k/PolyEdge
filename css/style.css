@@ -629,11 +629,11 @@ footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:cent
 .pe-tw-row:last-child{border-bottom:none}
 .pe-tw-up{border-left:3px solid var(--green);padding-left:10px;margin-left:-2px}
 .pe-tw-down{border-left:3px solid var(--red);padding-left:10px;margin-left:-2px}
-.pe-tw-rank{font-family:var(--mono);font-size:11px;color:var(--text3);width:20px}
+.pe-tw-rank{font-family:var(--mono);font-size:11px;color:var(--text3);width:20px;flex-shrink:0}
 .pe-tw-body{flex:1;min-width:0}
-.pe-tw-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.35}
+.pe-tw-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.35;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pe-tw-meta{font-size:11px;color:var(--text3);margin-top:4px}
-.pe-tw-pnl{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap}
+.pe-tw-pnl{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0}
 .pe-tw-sec-h{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin:14px 0 6px}
 .pe-tw-sec-h:first-child{margin-top:0}
 .pe-mini-btn{font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid rgba(56,136,232,0.4);background:rgba(56,136,232,0.12);color:var(--accent);cursor:pointer}
