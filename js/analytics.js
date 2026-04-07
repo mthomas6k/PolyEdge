@@ -250,6 +250,8 @@ const PM = (() => {
     const best = bestFake ? { title: bestFake.title, outcome: bestFake.outcome, size: bestFake.size, realizedPnl: bestFake.net, cashPnl: 0, currentValue: 0 } : null;
     const worst = worstFake ? { title: worstFake.title, outcome: worstFake.outcome, size: worstFake.size, realizedPnl: worstFake.net, cashPnl: 0, currentValue: 0 } : null;
 
+    const sortedByPnlDesc = [...pos].sort((a, b) => positionTotalPnl(b) - positionTotalPnl(a));
+    const sortedByPnlAsc  = [...pos].sort((a, b) => positionTotalPnl(a) - positionTotalPnl(b));
     const top3Best = sortedByPnlDesc.filter(p => positionTotalPnl(p) > 0).slice(0, 3);
     const top3Worst = sortedByPnlAsc.filter(p => positionTotalPnl(p) < 0).slice(0, 3);
 
