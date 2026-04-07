@@ -19,10 +19,14 @@ export async function onRequest(context) {
   }
 
   try {
+    const userAgent = request.headers.get('User-Agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
     const targetResponse = await fetch(targetUrl, {
       headers: {
         'Accept': 'application/json, text/plain, */*',
-        'User-Agent': 'Cloudflare-Worker'
+        'User-Agent': userAgent,
+        'Referer': 'https://polymarket.com/',
+        'Origin': 'https://polymarket.com'
       }
     });
 
