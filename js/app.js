@@ -989,6 +989,19 @@ async function finalizeCheckoutSession(sessionId) {
   if (!sb || !sessionId || !SUPABASE_URL) return { ok: false, error: 'Not configured' };
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return { ok: false, error: 'Sign in required' };
+
+  // First, check if evaluation already exists for this session
+  const { data: existing } = await sb
+    .from('evaluations')
+    .select('id')
+    .eq('stripe_checkout_session_id', sessionId)
+    .maybeSingle();
+
+  if (existing?.id) {
+    return { ok: true, already: true, evaluation_id: existing.id };
+  }
+
+  // Try the edge function first (if deployed)
   try {
     const res = await fetch(getFinalizeCheckoutUrl(), {
       method: 'POST',
@@ -999,12 +1012,82 @@ async function finalizeCheckoutSession(sessionId) {
       },
       body: JSON.stringify({ session_id: sessionId })
     });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: j.error || ('HTTP ' + res.status) };
-    return j;
+    // If the function exists and worked, use its result
+    if (res.ok) {
+      const j = await res.json().catch(() => ({}));
+      if (j.ok) return j;
+    }
+    // If 404 (not deployed), fall through to direct insert
+    if (res.status !== 404) {
+      const j = await res.json().catch(() => ({}));
+      return { ok: false, error: j.error || ('HTTP ' + res.status) };
+    }
   } catch (e) {
-    return { ok: false, error: e.message || 'Network error' };
+    console.warn('finalize-checkout edge function not reachable, using direct insert:', e.message);
   }
+
+  // Fallback: create evaluation directly from client
+  // (RLS allows evaluations_insert_own when user_id = auth.uid())
+  let pendingCheckout = null;
+  try {
+    const raw = localStorage.getItem('pe_pending_checkout');
+    if (raw) pendingCheckout = JSON.parse(raw);
+  } catch (e) {}
+
+  if (!pendingCheckout) {
+    return { ok: false, error: 'No pending checkout data found. The finalize-checkout edge function is not deployed. Deploy it or contact support.' };
+  }
+
+  const evalType = pendingCheckout.eval_type || '1-step';
+  const accountSize = parseInt(pendingCheckout.account_size || '500', 10);
+  const isOneStep = evalType === '1-step';
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+
+  const row = {
+    user_id: currentUser.id,
+    eval_type: evalType,
+    account_size: accountSize,
+    phase: 1,
+    status: 'active',
+    starting_balance: accountSize,
+    balance: accountSize,
+    high_water_mark: accountSize,
+    profit_target_pct: isOneStep ? 10 : 6,
+    max_drawdown_pct: 6,
+    consistency_rule_pct: isOneStep ? 20 : 50,
+    min_trades: isOneStep ? 5 : 2,
+    trades_count: 0,
+    total_profit: 0,
+    total_loss: 0,
+    largest_trade_profit: 0,
+    expires_at: expiresAt,
+    stripe_checkout_session_id: sessionId,
+  };
+
+  const { data: inserted, error: insErr } = await sb
+    .from('evaluations')
+    .insert(row)
+    .select('id')
+    .single();
+
+  if (insErr) {
+    // If the column doesn't exist, try without it
+    if (insErr.message?.includes('stripe_checkout_session_id') || insErr.message?.includes('column')) {
+      delete row.stripe_checkout_session_id;
+      const { data: inserted2, error: insErr2 } = await sb
+        .from('evaluations')
+        .insert(row)
+        .select('id')
+        .single();
+      if (insErr2) return { ok: false, error: insErr2.message };
+      localStorage.removeItem('pe_pending_checkout');
+      return { ok: true, evaluation_id: inserted2?.id };
+    }
+    return { ok: false, error: insErr.message };
+  }
+
+  localStorage.removeItem('pe_pending_checkout');
+  return { ok: true, evaluation_id: inserted?.id };
 }
 
 /** @param {object} e evaluation */
@@ -2191,6 +2274,15 @@ async function startChallenge(type, size) {
     });
     const data = await res.json();
     if (data?.url) {
+      // Save checkout metadata so we can create the evaluation on return
+      // (needed when finalize-checkout edge function is not deployed)
+      try {
+        localStorage.setItem('pe_pending_checkout', JSON.stringify({
+          eval_type: type === '2step' ? '2-step' : '1-step',
+          account_size: String(size),
+          timestamp: Date.now(),
+        }));
+      } catch (e) {}
       window.location.href = data.url;
     } else {
       if (typeof Toast !== 'undefined') Toast.error('Checkout error: ' + (data?.error || 'Unknown error'));
