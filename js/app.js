@@ -1083,18 +1083,17 @@ async function finalizeCheckoutSession(sessionId) {
 
   console.log('[PolyEdge] Creating evaluation:', JSON.stringify(row));
 
-  let { data: inserted, error: insErr } = await sb
+  // NOTE: Using plain .insert() without .select() to avoid triggering
+  // SELECT RLS policies (which had infinite recursion on profiles table)
+  let { error: insErr } = await sb
     .from('evaluations')
-    .insert(row)
-    .select('id')
-    .single();
+    .insert(row);
 
   // If column doesn't exist error, retry without it
   if (insErr && (insErr.message?.includes('stripe_checkout_session_id') || insErr.message?.includes('column') || insErr.code === '42703')) {
     console.warn('[PolyEdge] Retrying insert without stripe_checkout_session_id');
     delete row.stripe_checkout_session_id;
-    const retry = await sb.from('evaluations').insert(row).select('id').single();
-    inserted = retry.data;
+    const retry = await sb.from('evaluations').insert(row);
     insErr = retry.error;
   }
 
@@ -1103,9 +1102,9 @@ async function finalizeCheckoutSession(sessionId) {
     return { ok: false, error: insErr.message || 'Insert failed' };
   }
 
-  console.log('[PolyEdge] Evaluation created successfully:', inserted?.id);
+  console.log('[PolyEdge] Evaluation created successfully!');
   try { localStorage.removeItem('pe_pending_checkout'); } catch (e) {}
-  return { ok: true, evaluation_id: inserted?.id };
+  return { ok: true };
 }
 
 /** @param {object} e evaluation */
