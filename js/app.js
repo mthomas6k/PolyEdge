@@ -986,78 +986,79 @@ function syncActiveEval() {
 }
 
 async function finalizeCheckoutSession(sessionId) {
-  if (!sb || !sessionId || !SUPABASE_URL) return { ok: false, error: 'Not configured' };
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) return { ok: false, error: 'Sign in required' };
+  if (!sb || !SUPABASE_URL) return { ok: false, error: 'Supabase not configured' };
+  if (!currentUser) return { ok: false, error: 'Not signed in' };
 
-  // Check if stripe_checkout_session_id column exists (it might not be migrated)
-  let hasStripeCol = false;
   try {
-    const { error: colCheck } = await sb
-      .from('evaluations')
-      .select('stripe_checkout_session_id')
-      .limit(0);
-    hasStripeCol = !colCheck;
-  } catch (e) { hasStripeCol = false; }
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return { ok: false, error: 'Auth session expired. Please sign in again.' };
+  } catch (e) {
+    return { ok: false, error: 'Auth check failed: ' + e.message };
+  }
 
-  // Dedup check (only if column exists)
-  if (hasStripeCol) {
+  // --- Step 1: Dedup — check if an evaluation already exists for this session ---
+  if (sessionId) {
     try {
-      const { data: existing } = await sb
+      const { data: existing, error: dupErr } = await sb
         .from('evaluations')
         .select('id')
         .eq('stripe_checkout_session_id', sessionId)
         .maybeSingle();
-      if (existing?.id) {
+      if (!dupErr && existing?.id) {
         return { ok: true, already: true, evaluation_id: existing.id };
       }
     } catch (e) {
-      console.warn('Dedup check failed (ok, will proceed):', e.message);
+      // Column might not exist — that's ok, continue
     }
   }
 
-  // Try the edge function first (if deployed)
-  try {
-    const res = await fetch(getFinalizeCheckoutUrl(), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + session.access_token,
-        'apikey': SUPABASE_KEY
-      },
-      body: JSON.stringify({ session_id: sessionId })
-    });
-    if (res.ok) {
-      const j = await res.json().catch(() => ({}));
-      if (j.ok) return j;
-    }
-    // If not 404, report the error (but don't stop — fall through)
-    if (res.status !== 404) {
-      console.warn('finalize-checkout returned:', res.status);
-    }
-  } catch (e) {
-    console.warn('finalize-checkout edge function not reachable, using direct insert');
-  }
+  // --- Step 2: Get challenge metadata (try URL hash, then localStorage) ---
+  let evalType = null;
+  let accountSize = null;
 
-  // Fallback: create evaluation directly from client
-  let pendingCheckout = null;
+  // Source A: URL hash (e.g. #pe=1-step,500)
   try {
-    const raw = localStorage.getItem('pe_pending_checkout');
-    if (raw) pendingCheckout = JSON.parse(raw);
+    const hash = window.location.hash || '';
+    const peMatch = hash.match(/pe=([^,]+),(\d+)/);
+    if (peMatch) {
+      evalType = peMatch[1];
+      accountSize = parseInt(peMatch[2], 10);
+    }
   } catch (e) {}
 
-  if (!pendingCheckout) {
-    return { ok: false, error: 'No pending checkout data. Try purchasing again.' };
+  // Source B: localStorage
+  if (!evalType || !accountSize) {
+    try {
+      const raw = localStorage.getItem('pe_pending_checkout');
+      if (raw) {
+        const pc = JSON.parse(raw);
+        evalType = evalType || pc.eval_type;
+        accountSize = accountSize || parseInt(pc.account_size, 10);
+      }
+    } catch (e) {}
   }
 
-  const evalType = pendingCheckout.eval_type || '1-step';
-  const accountSize = parseInt(pendingCheckout.account_size || '500', 10);
-  const isOneStep = evalType === '1-step';
+  // Source C: URL search params (as last resort)
+  if (!evalType || !accountSize) {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      evalType = evalType || sp.get('eval_type');
+      accountSize = accountSize || parseInt(sp.get('account_size') || '0', 10);
+    } catch (e) {}
+  }
+
+  // If we still don't have metadata, default to 1-step $500
+  // (better to create an account with defaults than to create nothing)
+  if (!evalType) evalType = '1-step';
+  if (!accountSize || isNaN(accountSize)) accountSize = 500;
+
+  const isOneStep = evalType === '1-step' || evalType === '1step';
   const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
 
+  // --- Step 3: Insert the evaluation directly ---
   const row = {
     user_id: currentUser.id,
-    eval_type: evalType,
+    eval_type: isOneStep ? '1-step' : '2-step',
     account_size: accountSize,
     phase: 1,
     status: 'active',
@@ -1075,34 +1076,35 @@ async function finalizeCheckoutSession(sessionId) {
     expires_at: expiresAt,
   };
 
-  // Only include the column if it exists in the schema
-  if (hasStripeCol) {
+  // Try including stripe session ID if column exists
+  if (sessionId) {
     row.stripe_checkout_session_id = sessionId;
   }
 
-  const { data: inserted, error: insErr } = await sb
+  console.log('[PolyEdge] Creating evaluation:', JSON.stringify(row));
+
+  let { data: inserted, error: insErr } = await sb
     .from('evaluations')
     .insert(row)
     .select('id')
     .single();
 
-  if (insErr) {
-    // If it's a column error, retry without the stripe column
-    if (insErr.message?.includes('stripe_checkout_session_id') || insErr.message?.includes('column')) {
-      delete row.stripe_checkout_session_id;
-      const { data: inserted2, error: insErr2 } = await sb
-        .from('evaluations')
-        .insert(row)
-        .select('id')
-        .single();
-      if (insErr2) return { ok: false, error: insErr2.message };
-      localStorage.removeItem('pe_pending_checkout');
-      return { ok: true, evaluation_id: inserted2?.id };
-    }
-    return { ok: false, error: insErr.message };
+  // If column doesn't exist error, retry without it
+  if (insErr && (insErr.message?.includes('stripe_checkout_session_id') || insErr.message?.includes('column') || insErr.code === '42703')) {
+    console.warn('[PolyEdge] Retrying insert without stripe_checkout_session_id');
+    delete row.stripe_checkout_session_id;
+    const retry = await sb.from('evaluations').insert(row).select('id').single();
+    inserted = retry.data;
+    insErr = retry.error;
   }
 
-  localStorage.removeItem('pe_pending_checkout');
+  if (insErr) {
+    console.error('[PolyEdge] Evaluation insert failed:', insErr);
+    return { ok: false, error: insErr.message || 'Insert failed' };
+  }
+
+  console.log('[PolyEdge] Evaluation created successfully:', inserted?.id);
+  try { localStorage.removeItem('pe_pending_checkout'); } catch (e) {}
   return { ok: true, evaluation_id: inserted?.id };
 }
 
@@ -2275,6 +2277,7 @@ async function startChallenge(type, size) {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) { showPage('login'); return; }
 
+    const evalTypeStr = type === '2step' ? '2-step' : '1-step';
     const res = await fetch(getCreateCheckoutUrl(), {
       method: 'POST',
       headers: {
@@ -2285,16 +2288,16 @@ async function startChallenge(type, size) {
       body: JSON.stringify({
         type: type,
         size: size,
-        success_base_url: getSiteBaseUrl() || undefined,
+        // Encode challenge type/size in the hash so it survives the redirect
+        success_base_url: (getSiteBaseUrl() || '') + '#pe=' + evalTypeStr + ',' + size,
       })
     });
     const data = await res.json();
     if (data?.url) {
-      // Save checkout metadata so we can create the evaluation on return
-      // (needed when finalize-checkout edge function is not deployed)
+      // Save checkout metadata in localStorage as backup
       try {
         localStorage.setItem('pe_pending_checkout', JSON.stringify({
-          eval_type: type === '2step' ? '2-step' : '1-step',
+          eval_type: evalTypeStr,
           account_size: String(size),
           timestamp: Date.now(),
         }));
@@ -2529,7 +2532,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           ? 'Your evaluation is already linked — head to Accounts or Markets.'
           : 'Your evaluation account is ready. You can trade from Markets or the Dashboard.';
       } else {
-        msg = 'Payment received. If your account does not show on Accounts in a minute, confirm the Stripe webhook is deployed, or run the SQL migration for stripe_checkout_session_id. Details: ' + (r.error || 'unknown');
+        msg = 'Payment received but account creation failed: ' + (r.error || 'unknown error') + '. Please contact support.';
       }
     } else {
       await AccountManager.loadAccounts();
