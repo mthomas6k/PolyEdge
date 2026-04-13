@@ -2521,8 +2521,31 @@ document.addEventListener('DOMContentLoaded', async function() {
   const payParams = new URLSearchParams(window.location.search);
   if (payParams.get('payment') === 'success') {
     const stripeSessionId = payParams.get('session_id');
+
+    // If currentUser is null after checkSession, try harder to restore the auth session
+    // (Supabase session may take a moment to rehydrate after external redirect)
+    if (!currentUser && sb) {
+      console.log('[PolyEdge] currentUser is null after checkSession, retrying auth...');
+      for (let attempt = 0; attempt < 3 && !currentUser; attempt++) {
+        await new Promise(r => setTimeout(r, 1000)); // wait 1 second
+        try {
+          const { data: { session } } = await sb.auth.getSession();
+          if (session?.user) {
+            currentUser = session.user;
+            await loadProfile();
+            updateAuthUI(true);
+            console.log('[PolyEdge] Auth restored on attempt', attempt + 1);
+          }
+        } catch (e) {
+          console.warn('[PolyEdge] Auth retry failed:', e.message);
+        }
+      }
+    }
+
     let msg = 'Payment received.';
-    if (stripeSessionId && sb && currentUser && getFinalizeCheckoutUrl()) {
+
+    if (sb && currentUser) {
+      // We have auth — try to create the evaluation
       const r = await finalizeCheckoutSession(stripeSessionId);
       if (r.ok) {
         await AccountManager.loadAccounts();
@@ -2530,23 +2553,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         syncActiveEval();
         msg = r.already
           ? 'Your evaluation is already linked — head to Accounts or Markets.'
-          : 'Your evaluation account is ready. You can trade from Markets or the Dashboard.';
+          : 'Your evaluation account is ready! Head to Markets to start trading.';
       } else {
-        msg = 'Payment received but account creation failed: ' + (r.error || 'unknown error') + '. Please contact support.';
+        msg = 'Payment received but account creation failed: ' + (r.error || 'unknown error');
+        console.error('[PolyEdge] finalizeCheckoutSession failed:', r.error);
       }
     } else {
-      await AccountManager.loadAccounts();
-      AccountManager.restoreSelection();
-      syncActiveEval();
-      msg += ' Open Accounts — if empty, configure Stripe webhook (checkout.session.completed) or use the finalize-checkout function with session_id in the success URL.';
+      // Auth completely failed — the user needs to sign in
+      msg = 'Payment received! Please sign in to activate your account. Your purchase is saved and will appear once you log in.';
+      console.warn('[PolyEdge] No auth session after Stripe redirect. currentUser:', currentUser, 'sb:', !!sb);
     }
-    const clean = window.location.pathname + (window.location.hash || '');
+
+    const clean = window.location.pathname;
     window.history.replaceState({}, '', clean || '/');
     if (typeof Toast !== 'undefined') {
       if (msg.includes('ready') || msg.includes('linked')) {
         Toast.success(msg, 7000);
+      } else if (msg.includes('sign in')) {
+        Toast.warning(msg, 10000);
       } else {
-        Toast.info(msg, 8000);
+        Toast.error(msg, 10000);
       }
     } else {
       alert(msg);
