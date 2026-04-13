@@ -986,76 +986,31 @@ function syncActiveEval() {
 }
 
 async function finalizeCheckoutSession(sessionId) {
-  if (!sb || !SUPABASE_URL) return { ok: false, error: 'Supabase not configured' };
+  if (!sb) return { ok: false, error: 'Supabase not configured' };
   if (!currentUser) return { ok: false, error: 'Not signed in' };
 
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return { ok: false, error: 'Auth session expired. Please sign in again.' };
-  } catch (e) {
-    return { ok: false, error: 'Auth check failed: ' + e.message };
-  }
-
-  // --- Step 1: Dedup — check if an evaluation already exists for this session ---
-  if (sessionId) {
-    try {
-      const { data: existing, error: dupErr } = await sb
-        .from('evaluations')
-        .select('id')
-        .eq('stripe_checkout_session_id', sessionId)
-        .maybeSingle();
-      if (!dupErr && existing?.id) {
-        return { ok: true, already: true, evaluation_id: existing.id };
-      }
-    } catch (e) {
-      // Column might not exist — that's ok, continue
-    }
-  }
-
-  // --- Step 2: Get challenge metadata (try URL hash, then localStorage) ---
+  // Get challenge metadata from URL hash or localStorage (no DB queries)
   let evalType = null;
   let accountSize = null;
 
-  // Source A: URL hash (e.g. #pe=1-step,500)
   try {
     const hash = window.location.hash || '';
     const peMatch = hash.match(/pe=([^,]+),(\d+)/);
-    if (peMatch) {
-      evalType = peMatch[1];
-      accountSize = parseInt(peMatch[2], 10);
-    }
+    if (peMatch) { evalType = peMatch[1]; accountSize = parseInt(peMatch[2], 10); }
   } catch (e) {}
 
-  // Source B: localStorage
   if (!evalType || !accountSize) {
     try {
       const raw = localStorage.getItem('pe_pending_checkout');
-      if (raw) {
-        const pc = JSON.parse(raw);
-        evalType = evalType || pc.eval_type;
-        accountSize = accountSize || parseInt(pc.account_size, 10);
-      }
+      if (raw) { const pc = JSON.parse(raw); evalType = evalType || pc.eval_type; accountSize = accountSize || parseInt(pc.account_size, 10); }
     } catch (e) {}
   }
 
-  // Source C: URL search params (as last resort)
-  if (!evalType || !accountSize) {
-    try {
-      const sp = new URLSearchParams(window.location.search);
-      evalType = evalType || sp.get('eval_type');
-      accountSize = accountSize || parseInt(sp.get('account_size') || '0', 10);
-    } catch (e) {}
-  }
-
-  // If we still don't have metadata, default to 1-step $500
-  // (better to create an account with defaults than to create nothing)
   if (!evalType) evalType = '1-step';
   if (!accountSize || isNaN(accountSize)) accountSize = 500;
 
   const isOneStep = evalType === '1-step' || evalType === '1step';
-  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
 
-  // --- Step 3: Insert the evaluation directly ---
   const row = {
     user_id: currentUser.id,
     eval_type: isOneStep ? '1-step' : '2-step',
@@ -1073,36 +1028,20 @@ async function finalizeCheckoutSession(sessionId) {
     total_profit: 0,
     total_loss: 0,
     largest_trade_profit: 0,
-    expires_at: expiresAt,
+    expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
   };
 
-  // Try including stripe session ID if column exists
-  if (sessionId) {
-    row.stripe_checkout_session_id = sessionId;
+  console.log('[PolyEdge] Inserting evaluation (no SELECT):', JSON.stringify(row));
+
+  // ONLY an INSERT — no .select(), no dedup check, nothing that triggers SELECT RLS
+  const { error } = await sb.from('evaluations').insert(row);
+
+  if (error) {
+    console.error('[PolyEdge] Insert failed:', error);
+    return { ok: false, error: error.message };
   }
 
-  console.log('[PolyEdge] Creating evaluation:', JSON.stringify(row));
-
-  // NOTE: Using plain .insert() without .select() to avoid triggering
-  // SELECT RLS policies (which had infinite recursion on profiles table)
-  let { error: insErr } = await sb
-    .from('evaluations')
-    .insert(row);
-
-  // If column doesn't exist error, retry without it
-  if (insErr && (insErr.message?.includes('stripe_checkout_session_id') || insErr.message?.includes('column') || insErr.code === '42703')) {
-    console.warn('[PolyEdge] Retrying insert without stripe_checkout_session_id');
-    delete row.stripe_checkout_session_id;
-    const retry = await sb.from('evaluations').insert(row);
-    insErr = retry.error;
-  }
-
-  if (insErr) {
-    console.error('[PolyEdge] Evaluation insert failed:', insErr);
-    return { ok: false, error: insErr.message || 'Insert failed' };
-  }
-
-  console.log('[PolyEdge] Evaluation created successfully!');
+  console.log('[PolyEdge] Evaluation created!');
   try { localStorage.removeItem('pe_pending_checkout'); } catch (e) {}
   return { ok: true };
 }
@@ -2531,7 +2470,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           const { data: { session } } = await sb.auth.getSession();
           if (session?.user) {
             currentUser = session.user;
-            await loadProfile();
+            // Skip loadProfile here — it queries profiles table which has recursive RLS
             updateAuthUI(true);
             console.log('[PolyEdge] Auth restored on attempt', attempt + 1);
           }
