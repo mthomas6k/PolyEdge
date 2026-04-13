@@ -788,7 +788,7 @@ function profitCalc() {
         ? '<strong>Positive expected value</strong> if your win rate holds — keep sizing disciplined.'
         : ev > 0
           ? 'Edge looks thin — small edge, high variance.'
-          : '<strong>EV is negative</strong> at these inputs — you’d need a higher hit rate or cheaper entry.';
+          : '<strong>EV is negative</strong> at these inputs — you would need a higher hit rate or cheaper entry.';
     sumEl.innerHTML =
       `<p><strong>Expected value (rough):</strong> ${ev >= 0 ? '+' : ''}$${ev.toFixed(2)} per trial <span style="color:var(--text3)">(ignores fees/slippage)</span>.</p>` +
       `<p>${edge}</p>` +
@@ -1219,7 +1219,7 @@ async function closeTrade() {
     } else if (updateData.status === 'passed') {
       Toast.success('🎉 Congratulations! All targets met — evaluation passed!', 8000);
     } else if (updateData.phase === 2) {
-      Toast.success('Phase 1 complete! You're now in Phase 2.', 6000);
+      Toast.success('Phase 1 complete! Now entering Phase 2.', 6000);
     }
   }
 
@@ -1970,7 +1970,7 @@ async function requestPayout() {
     return;
   }
   const payoutAmount = (profit * 0.8).toFixed(2);
-  Toast.success(`Payout request submitted: <strong>$${payoutAmount}</strong> (80% of $${profit.toFixed(2)} profit). You'll receive an email with next steps.`, 8000);
+  Toast.success(`Payout request submitted: <strong>$${payoutAmount}</strong> (80% of $${profit.toFixed(2)} profit). You will receive an email with next steps.`, 8000);
   // In a production environment, this would insert into a payout_requests table
   // and trigger an admin notification
 }

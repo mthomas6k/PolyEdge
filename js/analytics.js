@@ -515,7 +515,7 @@ function pickSnapshotHeadline(tier) {
     good: ['Cooking', 'Solid run', 'Nice edge', 'Green machine', 'In the zone'],
     flat: ['Aight', 'Sideways', 'Breakeven-ish', 'Neutral NPC', 'Flat as a pancake'],
     weak: ['Slightly cooked', 'Leaky boat', 'Rough patch', 'Oof territory', 'Needs a bounce'],
-    bad: ['Under water', 'Cooked', 'It’s giving drawdown', 'RIP streak', 'Send help'],
+    bad: ['Under water', 'Cooked', 'It\'s giving drawdown', 'RIP streak', 'Send help'],
   };
   const arr = pools[tier] || pools.flat;
   return arr[Math.floor(Math.random() * arr.length)];
