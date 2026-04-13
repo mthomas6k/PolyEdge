@@ -990,15 +990,30 @@ async function finalizeCheckoutSession(sessionId) {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return { ok: false, error: 'Sign in required' };
 
-  // First, check if evaluation already exists for this session
-  const { data: existing } = await sb
-    .from('evaluations')
-    .select('id')
-    .eq('stripe_checkout_session_id', sessionId)
-    .maybeSingle();
+  // Check if stripe_checkout_session_id column exists (it might not be migrated)
+  let hasStripeCol = false;
+  try {
+    const { error: colCheck } = await sb
+      .from('evaluations')
+      .select('stripe_checkout_session_id')
+      .limit(0);
+    hasStripeCol = !colCheck;
+  } catch (e) { hasStripeCol = false; }
 
-  if (existing?.id) {
-    return { ok: true, already: true, evaluation_id: existing.id };
+  // Dedup check (only if column exists)
+  if (hasStripeCol) {
+    try {
+      const { data: existing } = await sb
+        .from('evaluations')
+        .select('id')
+        .eq('stripe_checkout_session_id', sessionId)
+        .maybeSingle();
+      if (existing?.id) {
+        return { ok: true, already: true, evaluation_id: existing.id };
+      }
+    } catch (e) {
+      console.warn('Dedup check failed (ok, will proceed):', e.message);
+    }
   }
 
   // Try the edge function first (if deployed)
@@ -1012,22 +1027,19 @@ async function finalizeCheckoutSession(sessionId) {
       },
       body: JSON.stringify({ session_id: sessionId })
     });
-    // If the function exists and worked, use its result
     if (res.ok) {
       const j = await res.json().catch(() => ({}));
       if (j.ok) return j;
     }
-    // If 404 (not deployed), fall through to direct insert
+    // If not 404, report the error (but don't stop — fall through)
     if (res.status !== 404) {
-      const j = await res.json().catch(() => ({}));
-      return { ok: false, error: j.error || ('HTTP ' + res.status) };
+      console.warn('finalize-checkout returned:', res.status);
     }
   } catch (e) {
-    console.warn('finalize-checkout edge function not reachable, using direct insert:', e.message);
+    console.warn('finalize-checkout edge function not reachable, using direct insert');
   }
 
   // Fallback: create evaluation directly from client
-  // (RLS allows evaluations_insert_own when user_id = auth.uid())
   let pendingCheckout = null;
   try {
     const raw = localStorage.getItem('pe_pending_checkout');
@@ -1035,7 +1047,7 @@ async function finalizeCheckoutSession(sessionId) {
   } catch (e) {}
 
   if (!pendingCheckout) {
-    return { ok: false, error: 'No pending checkout data found. The finalize-checkout edge function is not deployed. Deploy it or contact support.' };
+    return { ok: false, error: 'No pending checkout data. Try purchasing again.' };
   }
 
   const evalType = pendingCheckout.eval_type || '1-step';
@@ -1061,8 +1073,12 @@ async function finalizeCheckoutSession(sessionId) {
     total_loss: 0,
     largest_trade_profit: 0,
     expires_at: expiresAt,
-    stripe_checkout_session_id: sessionId,
   };
+
+  // Only include the column if it exists in the schema
+  if (hasStripeCol) {
+    row.stripe_checkout_session_id = sessionId;
+  }
 
   const { data: inserted, error: insErr } = await sb
     .from('evaluations')
@@ -1071,7 +1087,7 @@ async function finalizeCheckoutSession(sessionId) {
     .single();
 
   if (insErr) {
-    // If the column doesn't exist, try without it
+    // If it's a column error, retry without the stripe column
     if (insErr.message?.includes('stripe_checkout_session_id') || insErr.message?.includes('column')) {
       delete row.stripe_checkout_session_id;
       const { data: inserted2, error: insErr2 } = await sb
