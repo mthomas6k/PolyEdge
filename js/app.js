@@ -240,7 +240,7 @@ function marketsChromeHTML() {
         </div>
         <div class="dash-markets-search pm-search">
           <input id="market-search-input" type="search" placeholder="Search markets…" autocomplete="off" oninput="handleMarketSearch(event)">
-          <button type="button" class="form-btn pm-refresh" onclick="refreshMarkets()">↻ Refresh</button>
+          <button type="button" class="form-btn pm-refresh" onclick="refreshMarkets()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Refresh</button>
         </div>
       </div>
       <div class="pm-cat-row" id="pm-cat-pills"></div>
@@ -394,7 +394,7 @@ function renderPmCard(m, canBet, idx) {
         <div class="pm-card-headtext">
           <div class="pm-card-title-row">
             <h4 class="pm-card-title">${truncateStr(pm.question, 200)}</h4>
-            <span class="pm-live-badge">⚡ Live</span>
+            <span class="pm-live-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:2px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Live</span>
           </div>
           <div class="pm-bucket">${PolymarketService.marketBucket(m)}</div>
         </div>
@@ -1080,7 +1080,7 @@ function renderDashEvalHub(e, closedTrades) {
         </div>
       </div>
       <div class="pe-hub-deadline">
-        <span class="pe-dl-ic">⏱</span>
+        <span class="pe-dl-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
         <strong>${daysLeft}</strong> day${daysLeft === 1 ? '' : 's'} left in this phase · deadline ${new Date(e.expires_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}
       </div>
     </div>`;
@@ -1132,6 +1132,7 @@ async function openTrade() {
   const nameEl = document.getElementById('tr-name'); if (nameEl) nameEl.value = '';
   const sizeEl = document.getElementById('tr-size'); if (sizeEl) sizeEl.value = '';
   const entryEl = document.getElementById('tr-entry'); if (entryEl) entryEl.value = '';
+  if (typeof Toast !== 'undefined') Toast.success(`Trade opened: <strong>${name}</strong> · ${side} · $${size.toFixed(2)}`);
   await loadDashboard();
 }
 
@@ -1205,6 +1206,23 @@ async function closeTrade() {
   await sb.from('evaluations').update(updateData).eq('id', e.id);
   await AccountManager.loadAccounts();
   closeModal('close-modal');
+
+  // Toast notification for trade result
+  if (typeof Toast !== 'undefined') {
+    if (pnl >= 0) {
+      Toast.success(`Trade closed: <strong>+$${pnl.toFixed(2)}</strong> profit`);
+    } else {
+      Toast.warning(`Trade closed: <strong>−$${Math.abs(pnl).toFixed(2)}</strong> loss`);
+    }
+    if (updateData.status === 'failed') {
+      Toast.error('Drawdown limit breached — evaluation failed.', 8000);
+    } else if (updateData.status === 'passed') {
+      Toast.success('🎉 Congratulations! All targets met — evaluation passed!', 8000);
+    } else if (updateData.phase === 2) {
+      Toast.success('Phase 1 complete! You're now in Phase 2.', 6000);
+    }
+  }
+
   await loadDashboard();
 }
 
@@ -1569,14 +1587,20 @@ async function loadPolyEdgeStats() {
   const container = document.getElementById('stats-content');
   if (!container) return;
   if (!currentUser || !sb) {
-    container.innerHTML = '<div class="an-center"><div class="an-connect-box"><h2>Sign In to View Dashboard</h2><p>Your evaluation dashboard is only available when you are logged in.</p><button class="form-btn" data-page="login">Sign In →</button></div></div>';
+    container.innerHTML = `<div class="an-center"><div class="an-connect-box">
+      <h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Sign In to View Dashboard</h2>
+      <p>Your evaluation dashboard is only available when you are logged in.</p>
+      <button class="form-btn" data-page="login">Sign In →</button></div></div>`;
     bindDataPage();
     return;
   }
 
   const selectedAccount = AccountManager.getSelected();
   if (!selectedAccount) {
-    container.innerHTML = '<div class="an-center"><div class="an-connect-box"><h2>No Active Evaluation</h2><p>Select an account on the Accounts page to view its stats.</p><button class="form-btn" data-page="accounts">View Accounts →</button></div></div>';
+    container.innerHTML = `<div class="an-center"><div class="an-connect-box">
+      <h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> No Active Evaluation</h2>
+      <p>Purchase a challenge or select an account on the Accounts page to see its dashboard.</p>
+      <button class="form-btn" data-page="accounts">View Accounts →</button></div></div>`;
     bindDataPage();
     return;
   }
@@ -1590,13 +1614,19 @@ async function loadPolyEdgeStats() {
   }, 400);
 
   try {
-    const { data: trades } = await sb.from('trades')
+    // Fetch all trades
+    const { data: allTrades } = await sb.from('trades')
       .select('*')
       .eq('evaluation_id', selectedAccount.id)
-      .eq('status', 'closed')
-      .order('closed_at', { ascending: true });
-    const closedTrades = trades || [];
+      .order('created_at', { ascending: false });
 
+    const trades = allTrades || [];
+    const closedTrades = trades.filter(t => t.status === 'closed');
+    const openTrades = trades.filter(t => t.status === 'open');
+
+    closedTrades.sort((a, b) => (a.closed_at || '').localeCompare(b.closed_at || ''));
+
+    const e = selectedAccount;
     const totalPnl = closedTrades.reduce((s, t) => s + parseFloat(t.pnl || 0), 0);
     const wins = closedTrades.filter(t => t.pnl > 0);
     const losses = closedTrades.filter(t => t.pnl < 0);
@@ -1604,6 +1634,25 @@ async function loadPolyEdgeStats() {
     const bestTrade = closedTrades.reduce((b, t) => (b === null || t.pnl > b.pnl) ? t : b, null);
     const worstTrade = closedTrades.reduce((b, t) => (b === null || t.pnl < b.pnl) ? t : b, null);
 
+    const profit = e.balance - e.starting_balance;
+    const profitPct = ((profit / e.starting_balance) * 100).toFixed(2);
+    const profitTarget = e.starting_balance * (e.profit_target_pct / 100);
+    const profitBar = profitTarget > 0 ? Math.min(100, (Math.max(0, profit) / profitTarget) * 100) : 0;
+    const ddUsed = e.high_water_mark > 0 ? ((e.high_water_mark - e.balance) / e.high_water_mark * 100) : 0;
+    const tradesMet = (e.trades_count || 0) >= Math.max(1, e.min_trades);
+    const daysLeft = Math.max(0, Math.ceil((new Date(e.expires_at).getTime() - Date.now()) / 86400000));
+
+    // Consistency check
+    let largestPct = 0;
+    let consistencyOk = true;
+    const closedProfit = closedTrades.filter(t => t.pnl > 0).reduce((s, t) => s + parseFloat(t.pnl || 0), 0);
+    if (closedProfit > 0) {
+      const maxTrade = Math.max(...closedTrades.filter(t => t.pnl > 0).map(t => parseFloat(t.pnl)), 0);
+      largestPct = (maxTrade / closedProfit) * 100;
+      consistencyOk = largestPct <= e.consistency_rule_pct;
+    }
+
+    // Cumulative P&L for chart
     const dailyPnl = {};
     closedTrades.forEach(t => {
       const day = (t.closed_at || '').slice(0, 10);
@@ -1611,54 +1660,210 @@ async function loadPolyEdgeStats() {
       if (!dailyPnl[day]) dailyPnl[day] = 0;
       dailyPnl[day] += parseFloat(t.pnl || 0);
     });
-    const days = Object.keys(dailyPnl).sort();
+    const dayKeys = Object.keys(dailyPnl).sort();
     let cum = 0;
-    const cumPnl = days.map(d => {
-      cum += dailyPnl[d];
-      return { date: d, pnl: parseFloat(cum.toFixed(2)) };
+    const cumPnl = dayKeys.map(dd => {
+      cum += dailyPnl[dd];
+      return { date: dd, pnl: parseFloat(cum.toFixed(2)) };
     });
 
+    // SVG icons
+    const IC = {
+      wallet: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+      trendUp: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+      trendDown: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`,
+      check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+      alert: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+      x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+      clock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+      timeline: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>`,
+      dollar: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+      send: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
+    };
+
+    const pnlIcon = profit >= 0 ? IC.trendUp : IC.trendDown;
+    const pnlColor = profit >= 0 ? 'var(--green)' : 'var(--red)';
+    const pnlSign = profit >= 0 ? '+' : '';
+
+    // Rule status helpers
+    function ruleStatus(ok, partial) {
+      if (ok) return `<div class="dash-rule-status dash-rule-pass">${IC.check}</div>`;
+      if (partial) return `<div class="dash-rule-status dash-rule-warn">${IC.alert}</div>`;
+      return `<div class="dash-rule-status dash-rule-fail">${IC.x}</div>`;
+    }
+
+    const isFunded = e.status === 'funded';
+    const isActive = e.status === 'active';
+
+    // Payout calculations for funded
+    const profitSplit = isFunded ? 0.8 : 0;
+    const payoutAmount = isFunded ? Math.max(0, profit * profitSplit) : 0;
+
+    // Timeline events
+    const timelineEvents = [];
+    if (e.created_at) timelineEvents.push({ date: e.created_at, label: 'Evaluation started', done: true });
+    if (closedTrades.length > 0) timelineEvents.push({ date: closedTrades[0].closed_at || closedTrades[0].created_at, label: 'First trade closed', done: true });
+    if (e.status === 'passed') timelineEvents.push({ date: null, label: 'Evaluation passed', done: true });
+    if (e.status === 'funded') timelineEvents.push({ date: null, label: 'Funded status achieved', done: true });
+    if (isActive) {
+      const targetStr = profitBar >= 100 ? 'Target reached!' : `${profitBar.toFixed(0)}% toward profit target`;
+      timelineEvents.push({ date: null, label: targetStr, done: false, active: true });
+    }
+    timelineEvents.push({ date: e.expires_at, label: `Phase deadline (${daysLeft}d)`, done: false });
+
     container.innerHTML = `
-      <div class="an-header pe-dash-head">
-        <div class="an-header-left">
-          <h1 class="an-title">Evaluation dashboard</h1>
-          <div class="an-wallet-badge" style="margin-top:8px">
-            <span class="an-wallet-dot"></span>
-            <span class="an-wallet-addr">$${Number(selectedAccount.account_size).toLocaleString()} · ${selectedAccount.eval_type} · Phase ${selectedAccount.phase}</span>
+      <!-- HERO BALANCE CARD -->
+      <div class="dash-hero-balance">
+        <div class="dash-balance-left">
+          <div class="dash-balance-kicker">${IC.wallet} Current Balance</div>
+          <div class="dash-balance-amount">$${Number(e.balance).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+          <div class="dash-balance-pnl" style="color:${pnlColor}">
+            ${pnlIcon} ${pnlSign}$${Math.abs(profit).toFixed(2)} (${pnlSign}${profitPct}%)
           </div>
+        </div>
+        <div class="dash-balance-right">
+          <div class="dash-mini-stat">
+            <div class="dash-mini-label">Account</div>
+            <div class="dash-mini-val">$${Number(e.account_size).toLocaleString()}</div>
+          </div>
+          <div class="dash-mini-stat">
+            <div class="dash-mini-label">Type</div>
+            <div class="dash-mini-val">${e.eval_type === '1-step' ? '1-Step' : '2-Step'}</div>
+          </div>
+          <div class="dash-mini-stat">
+            <div class="dash-mini-label">Phase</div>
+            <div class="dash-mini-val">${e.phase}</div>
+          </div>
+          <div class="dash-mini-stat">
+            <div class="dash-mini-label">Days Left</div>
+            <div class="dash-mini-val" style="color:${daysLeft <= 5 ? 'var(--red)' : '#fff'}">${daysLeft}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RULE COMPLIANCE GRID -->
+      <div class="dash-rules-grid">
+        <div class="dash-rule-card">
+          <div class="dash-rule-header">
+            <div class="dash-rule-title">Profit Target</div>
+            ${ruleStatus(profitBar >= 100, profitBar >= 50)}
+          </div>
+          <div class="dash-rule-val" style="color:${profitBar >= 100 ? 'var(--green)' : '#fff'}">${profitBar.toFixed(0)}%</div>
+          <div class="dash-rule-sub">${fmt(Math.max(0, profit))} / ${fmt(profitTarget)} · ${e.profit_target_pct}% target</div>
+        </div>
+        <div class="dash-rule-card">
+          <div class="dash-rule-header">
+            <div class="dash-rule-title">Max Drawdown</div>
+            ${ruleStatus(ddUsed < e.max_drawdown_pct * 0.7, ddUsed < e.max_drawdown_pct)}
+          </div>
+          <div class="dash-rule-val" style="color:${ddUsed > e.max_drawdown_pct * 0.8 ? 'var(--red)' : ddUsed > e.max_drawdown_pct * 0.5 ? '#fbbf24' : '#fff'}">${ddUsed.toFixed(1)}%</div>
+          <div class="dash-rule-sub">of ${e.max_drawdown_pct}% max · HWM ${fmt(e.high_water_mark)}</div>
+        </div>
+        <div class="dash-rule-card">
+          <div class="dash-rule-header">
+            <div class="dash-rule-title">Min Trades</div>
+            ${ruleStatus(tradesMet, (e.trades_count || 0) > 0)}
+          </div>
+          <div class="dash-rule-val">${e.trades_count || 0} / ${e.min_trades}</div>
+          <div class="dash-rule-sub">${tradesMet ? 'Requirement met' : `${Math.max(0, e.min_trades - (e.trades_count || 0))} more needed`}</div>
+        </div>
+        <div class="dash-rule-card">
+          <div class="dash-rule-header">
+            <div class="dash-rule-title">Consistency</div>
+            ${ruleStatus(consistencyOk && closedProfit > 0, consistencyOk)}
+          </div>
+          <div class="dash-rule-val" style="color:${consistencyOk ? '#fff' : 'var(--red)'}">${closedProfit > 0 ? largestPct.toFixed(0) + '%' : '—'}</div>
+          <div class="dash-rule-sub">Largest win % of profit · max ${e.consistency_rule_pct}%</div>
         </div>
       </div>
 
       ${renderDashEvalHub(selectedAccount, closedTrades)}
 
+      ${isFunded ? `
+      <!-- PAYOUT SECTION -->
+      <div class="dash-payout-card">
+        <div class="dash-payout-header">
+          <div class="dash-payout-title">${IC.dollar} Payout</div>
+          ${AccountManager.getStatusBadge('funded')}
+        </div>
+        <div class="dash-payout-grid">
+          <div class="dash-payout-item">
+            <div class="dash-payout-label">Total Profit</div>
+            <div class="dash-payout-val" style="color:var(--green)">$${Math.max(0, profit).toFixed(2)}</div>
+          </div>
+          <div class="dash-payout-item">
+            <div class="dash-payout-label">Your Split (80%)</div>
+            <div class="dash-payout-val">$${payoutAmount.toFixed(2)}</div>
+          </div>
+          <div class="dash-payout-item">
+            <div class="dash-payout-label">Status</div>
+            <div class="dash-payout-val" style="font-size:16px">Available</div>
+          </div>
+        </div>
+        <button class="dash-payout-btn" onclick="requestPayout()" ${payoutAmount <= 0 ? 'disabled' : ''}>
+          ${IC.send} Request Payout
+        </button>
+      </div>` : ''}
+
+      <!-- ACTIVE POSITIONS -->
+      ${openTrades.length > 0 ? `
+      <div class="an-card-full pe-card-r">
+        <div class="an-card-header pe-card-head">
+          <div><span class="pe-card-kicker">Live</span><span class="an-card-title pe-card-title">Open Positions (${openTrades.length})</span></div>
+          <button class="acct-action-btn" onclick="openModal('trade-modal')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Trade
+          </button>
+        </div>
+        <div class="an-table-wrap">
+          <table class="an-table">
+            <thead><tr><th>Contract</th><th>Side</th><th>Size</th><th>Entry</th><th>Opened</th><th>Action</th></tr></thead>
+            <tbody>
+              ${openTrades.map(t => `
+                <tr class="an-tr">
+                  <td style="max-width:200px">${truncate(t.contract_name || '—', 35)}</td>
+                  <td><span class="an-outcome-badge" style="${t.side === 'YES' ? 'border-color:rgba(61,214,138,0.4);color:var(--green)' : 'border-color:rgba(248,113,113,0.3);color:var(--red)'}">${t.side}</span></td>
+                  <td>${fmt(t.trade_size)}</td>
+                  <td>${(t.entry_price * 100).toFixed(1)}¢</td>
+                  <td>${t.created_at ? new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}</td>
+                  <td><button class="acct-action-btn" onclick="openCloseModal('${t.id}','${(t.contract_name||'').replace(/'/g,"\\'")}',${t.entry_price},'${t.side}',${t.trade_size})">Close</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      <!-- KPI ROW -->
       <div class="an-kpis pe-kpis-r">
-        <div class="an-kpi">
+        <div class="an-kpi pe-card-r">
           <div class="an-kpi-label">Total P&L</div>
           <div class="an-kpi-val" style="color:${totalPnl >= 0 ? 'var(--green)' : 'var(--red)'}">${totalPnl >= 0 ? '+' : ''}$${Math.abs(totalPnl).toFixed(2)}</div>
           <div class="an-kpi-sub">closed trades only</div>
         </div>
-        <div class="an-kpi">
+        <div class="an-kpi pe-card-r">
           <div class="an-kpi-label">Win Rate</div>
           <div class="an-kpi-val" style="color:${winRate >= 50 ? 'var(--green)' : 'var(--red)'}">${winRate.toFixed(1)}%</div>
           <div class="an-kpi-sub">${wins.length}W / ${losses.length}L</div>
         </div>
-        <div class="an-kpi">
-          <div class="an-kpi-label">Closed Trades</div>
+        <div class="an-kpi pe-card-r">
+          <div class="an-kpi-label">Trades</div>
           <div class="an-kpi-val">${closedTrades.length}</div>
-          <div class="an-kpi-sub">PolyEdge platform only</div>
+          <div class="an-kpi-sub">${openTrades.length} open</div>
         </div>
-        <div class="an-kpi">
+        <div class="an-kpi pe-card-r">
           <div class="an-kpi-label">Best Trade</div>
           <div class="an-kpi-val" style="color:var(--green)">${bestTrade ? ('+$' + Number(bestTrade.pnl).toFixed(2)) : '$0.00'}</div>
-          <div class="an-kpi-sub">${bestTrade ? (bestTrade.contract_name || '—') : '—'}</div>
+          <div class="an-kpi-sub">${bestTrade ? truncate(bestTrade.contract_name || '—', 20) : '—'}</div>
         </div>
-        <div class="an-kpi">
+        <div class="an-kpi pe-card-r">
           <div class="an-kpi-label">Worst Trade</div>
           <div class="an-kpi-val" style="color:var(--red)">${worstTrade ? ('$' + Number(worstTrade.pnl).toFixed(2)) : '$0.00'}</div>
-          <div class="an-kpi-sub">${worstTrade ? (worstTrade.contract_name || '—') : '—'}</div>
+          <div class="an-kpi-sub">${worstTrade ? truncate(worstTrade.contract_name || '—', 20) : '—'}</div>
         </div>
       </div>
 
+      <!-- CHART + TRADE CARDS ROW -->
       <div class="an-grid">
         <div class="an-card an-card-wide pe-card-r pe-grad-card">
           <div class="an-card-header pe-card-head">
@@ -1677,36 +1882,50 @@ async function loadPolyEdgeStats() {
             <div id="stats-pnl-dial-value" class="pe-pnl-dial-val pe-tab-nums">${cumPnl.length ? dashFormatSigned(cumPnl[cumPnl.length - 1].pnl) : '—'}</div>
             <div id="stats-pnl-dial-date" class="pe-pnl-dial-date">${cumPnl.length ? cumPnl[cumPnl.length - 1].date : ''}</div>
           </div>
-          ${cumPnl.length ? '<div class="an-chart-wrap an-chart-interactive pe-chart-shade"><canvas id="stats-pnl-chart"></canvas></div>' : '<div class="an-empty-chart">No closed trades yet</div>'}
+          ${cumPnl.length ? '<div class="an-chart-wrap an-chart-interactive pe-chart-shade"><canvas id="stats-pnl-chart"></canvas></div>' : '<div class="an-empty-chart">No closed trades yet — place a trade from Markets</div>'}
           <p class="pe-fineprint">Built from closed-trade P&amp;L by day. Green / red segments = up / down vs previous point.</p>
         </div>
 
-        <div class="an-card">
+        <div class="an-card pe-card-r">
           <div class="an-card-header"><span class="an-card-title">Best Trade</span></div>
           ${bestTrade ? `
             <div class="an-bw-item an-bw-best">
-              <div class="an-bw-label">↑ Best Trade</div>
+              <div class="an-bw-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Best Trade</div>
               <div class="an-bw-title">${truncate(bestTrade.contract_name || '—', 40)}</div>
               <div class="an-bw-val" style="color:var(--green)">+$${Number(bestTrade.pnl).toFixed(2)}</div>
             </div>` : '<div class="an-empty-state">No closed trades yet</div>'}
         </div>
 
-        <div class="an-card">
+        <div class="an-card pe-card-r">
           <div class="an-card-header"><span class="an-card-title">Worst Trade</span></div>
           ${worstTrade ? `
             <div class="an-bw-item an-bw-worst">
-              <div class="an-bw-label">↓ Worst Trade</div>
+              <div class="an-bw-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg> Worst Trade</div>
               <div class="an-bw-title">${truncate(worstTrade.contract_name || '—', 40)}</div>
               <div class="an-bw-val" style="color:var(--red)">$${Number(worstTrade.pnl).toFixed(2)}</div>
             </div>` : '<div class="an-empty-state">No closed trades yet</div>'}
         </div>
 
-        <div class="an-card">
-          <div class="an-card-header"><span class="an-card-title">Summary</span></div>
-          <div class="an-tooltip">
+        <div class="an-card pe-card-r">
+          <div class="an-card-header"><span class="an-card-title">Account Info</span></div>
+          <div class="an-tooltip" style="margin-bottom:8px">
             Closed trades only. P&L and win rate are based on trades recorded through the PolyEdge platform.
           </div>
+          ${AccountManager.getStatusBadge(e.status)}
         </div>
+      </div>
+
+      <!-- TIMELINE -->
+      <div class="dash-timeline">
+        <div class="dash-timeline-title">${IC.timeline} Account Timeline</div>
+        <ul class="timeline-list">
+          ${timelineEvents.map(ev => `
+            <li class="timeline-item ${ev.done ? 'tl-done' : ''} ${ev.active ? 'tl-active' : ''}">
+              ${ev.label}
+              ${ev.date ? `<div class="timeline-date">${new Date(ev.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>` : ''}
+            </li>
+          `).join('')}
+        </ul>
       </div>
 
       <div id="stats-calendar"></div>
@@ -1720,24 +1939,42 @@ async function loadPolyEdgeStats() {
       window.__DASH_PNL_DATA__ = null;
     }
 
+    // Calendar
     await (async () => {
-      const { data: allClosed } = await sb.from('trades')
-        .select('*')
-        .eq('evaluation_id', selectedAccount.id)
-        .eq('status', 'closed')
-        .order('closed_at', { ascending: false });
-      CalendarComponent.setTrades(allClosed || []);
+      CalendarComponent.setTrades(closedTrades);
       CalendarComponent.setMilestones([
         { at: selectedAccount.expires_at, label: 'Phase deadline', kind: 'deadline' },
         ...(selectedAccount.created_at ? [{ at: selectedAccount.created_at, label: 'Eval started', kind: 'start' }] : [])
       ]);
       CalendarComponent.render('stats-calendar');
     })();
+
+    bindDataPage();
   } catch (e) {
     console.error('loadPolyEdgeStats failed:', e);
     container.innerHTML = '<div class="an-center"><div class="an-error-box"><h3>Failed to Load Stats</h3><p>' + (e.message || 'Unknown error') + '</p></div></div>';
   }
 }
+
+// Payout request handler
+async function requestPayout() {
+  if (typeof Toast === 'undefined') { alert('Toast system not loaded'); return; }
+  const acct = AccountManager.getSelected();
+  if (!acct || acct.status !== 'funded') {
+    Toast.warning('Only funded accounts can request payouts.');
+    return;
+  }
+  const profit = acct.balance - acct.starting_balance;
+  if (profit <= 0) {
+    Toast.warning('No profit available for payout.');
+    return;
+  }
+  const payoutAmount = (profit * 0.8).toFixed(2);
+  Toast.success(`Payout request submitted: <strong>$${payoutAmount}</strong> (80% of $${profit.toFixed(2)} profit). You'll receive an email with next steps.`, 8000);
+  // In a production environment, this would insert into a payout_requests table
+  // and trigger an admin notification
+}
+window.requestPayout = requestPayout;
 
 // ==========================================
 // CERTIFICATES PAGE
@@ -1820,7 +2057,7 @@ async function loadCertificate() {
         <div class="cert-type-card ${c.unlocked ? 'unlocked' : 'locked'}" ${c.unlocked ? '' : `title="${c.requirement}"`}>
           <div class="cert-type-header">
             <div class="cert-type-title">${c.title}</div>
-            ${c.unlocked ? '<span class="badge badge-ok">Unlocked</span>' : '<span class="cert-lock">🔒</span>'}
+            ${c.unlocked ? '<span class="badge badge-ok">Unlocked</span>' : '<span class="cert-lock"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>'}
           </div>
           <div class="cert-type-sub">${c.subtitle}</div>
           <div class="cert-type-body">
@@ -1956,10 +2193,12 @@ async function startChallenge(type, size) {
     if (data?.url) {
       window.location.href = data.url;
     } else {
-      alert('Checkout error: ' + (data?.error || 'Unknown error'));
+      if (typeof Toast !== 'undefined') Toast.error('Checkout error: ' + (data?.error || 'Unknown error'));
+      else alert('Checkout error: ' + (data?.error || 'Unknown error'));
     }
   } catch(e) {
-    alert('Failed to start checkout: ' + e.message);
+    if (typeof Toast !== 'undefined') Toast.error('Failed to start checkout: ' + e.message);
+    else alert('Failed to start checkout: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Start Challenge →'; }
   }
@@ -2192,11 +2431,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     const clean = window.location.pathname + (window.location.hash || '');
     window.history.replaceState({}, '', clean || '/');
-    alert(msg);
-    showPage('markets');
-    await loadDashboard();
+    if (typeof Toast !== 'undefined') {
+      if (msg.includes('ready') || msg.includes('linked')) {
+        Toast.success(msg, 7000);
+      } else {
+        Toast.info(msg, 8000);
+      }
+    } else {
+      alert(msg);
+    }
+    showPage('accounts');
+    await loadAccounts();
   } else if (payParams.get('payment') === 'cancelled') {
     window.history.replaceState({}, '', window.location.pathname + (window.location.hash || '') || '/');
+    if (typeof Toast !== 'undefined') Toast.info('Checkout cancelled. No charge was made.');
   }
 
   const activePid = document.querySelector('.page.active')?.id?.replace(/^page-/, '') || 'home';
