@@ -2321,6 +2321,7 @@ function showPage(id) {
   if (id === 'certificate') loadCertificate();
   if (id === 'dashboard') loadPolyEdgeStats();
   if (id === 'settings') loadSettings();
+  if (id === 'faq' && typeof FaqEngine !== 'undefined') FaqEngine.render('faq-hub-page');
 
   // Homepage animations
   if (id === 'home') {

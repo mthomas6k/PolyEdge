@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>PolyEdge — Polymarket Prop Betting</title>
+  <title>PolyEdge - Polymarket Prop Betting</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -50,6 +50,7 @@
 
   <!-- ========== HOME ========== -->
   <div id="page-home" class="page active">
+    <canvas id="snowfall-canvas"></canvas>
     <div class="hero">
       <div id="terminal-bg-container" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;pointer-events:none;"></div>
       <div class="hero-tag">Prediction Market Prop Betting</div>
@@ -62,8 +63,8 @@
         </div>
         <div class="hero-stat-divider"></div>
         <div class="hero-stat">
-          <div class="stat-counter" data-target="2000" data-prefix="$" data-decimals="0">$0</div>
-          <div class="hero-stat-label">Max Account Size</div>
+          <div class="stat-counter hero-cycle-target" id="hero-trade-with" data-cycle="500,1000,2000" data-prefix="$" data-decimals="0">$500</div>
+          <div class="hero-stat-label">Trade With</div>
         </div>
         <div class="hero-stat-divider"></div>
         <div class="hero-stat">
@@ -72,27 +73,59 @@
         </div>
       </div>
       <div class="hero-buttons">
-        <button class="btn btn-primary hero-cta-animated" data-page="challenges">View Challenges →</button>
+        <button class="btn btn-primary hero-cta-animated" data-page="challenges">View Challenges</button>
         <button class="btn btn-ghost" data-page="rules">Full rules</button>
       </div>
     </div>
 
+    <!-- GLOBE SECTION -->
+    <div class="globe-section section">
+      <div class="globe-wrap">
+        <canvas class="globe-canvas" id="globe-canvas"></canvas>
+        <div class="globe-ring"></div>
+        <div class="globe-ring globe-ring--2"></div>
+        <div class="globe-cats">
+          <div class="globe-cat globe-cat--politics"><span class="globe-cat-icon">🏛</span> Politics</div>
+          <div class="globe-cat globe-cat--events">Current Events <span class="globe-cat-icon">🌍</span></div>
+          <div class="globe-cat globe-cat--crypto"><span class="globe-cat-icon">₿</span> Crypto</div>
+          <div class="globe-cat globe-cat--economy">Economy <span class="globe-cat-icon">📈</span></div>
+          <div class="globe-cat globe-cat--entertainment"><span class="globe-cat-icon">🎬</span> Entertainment</div>
+          <div class="globe-cat globe-cat--sports">Sports <span class="globe-cat-icon">🏀</span></div>
+        </div>
+      </div>
+      <div class="globe-stats">
+        <div class="globe-stat">
+          <div class="globe-stat-num" id="globe-stat-markets" data-odo="10,000"><span class="odo-wrap">10,000</span><span class="globe-stat-suffix">+</span></div>
+          <div class="globe-stat-label">Live prediction markets</div>
+        </div>
+        <div class="globe-stat">
+          <div class="globe-stat-num" id="globe-stat-traders" data-odo="2,847"><span class="odo-wrap">2,847</span></div>
+          <div class="globe-stat-label">Active funded traders</div>
+        </div>
+        <div class="globe-stat">
+          <div class="globe-stat-num" id="globe-stat-countries" data-odo="32"><span class="odo-wrap">32</span><span class="globe-stat-suffix">+</span></div>
+          <div class="globe-stat-label">Countries with active traders</div>
+        </div>
+      </div>
+    </div>
+
     <div id="home-estimator" class="section home-estimator">
+      <div class="estimator-spotlight"></div>
       <div class="section-tag">Tools</div>
       <h2>Position &amp; risk estimator</h2>
-      <p class="estimator-lead">Sketch payouts and expected value. Tune win-rate and risk to see a plain-English trader profile — no wallet required.</p>
+      <p class="estimator-lead">Sketch payouts and expected value. Tune win-rate and risk to see a plain-English trader profile, no wallet required.</p>
       <div class="estimator-grid">
         <div class="form-group">
           <label class="form-label">Size ($ deployed)</label>
           <input class="form-input" id="pf-size" type="number" min="1" step="1" value="100" oninput="profitCalc()">
         </div>
         <div class="form-group">
-          <label class="form-label">Avg entry (¢)</label>
+          <label class="form-label">Avg entry (cents)</label>
           <input class="form-input" id="pf-entry" type="number" min="1" max="99" step="1" value="45" oninput="profitCalc()">
         </div>
         <div class="form-group">
           <label class="form-label">Your win rate guess (%)</label>
-          <input class="form-input" id="pf-winrate" type="number" min="5" max="95" step="1" value="55" oninput="profitCalc()" title="How often you think you’d be right at this entry">
+          <input class="form-input" id="pf-winrate" type="number" min="5" max="95" step="1" value="55" oninput="profitCalc()" title="How often you think you'd be right at this entry">
         </div>
         <div class="form-group">
           <label class="form-label">Risk posture</label>
@@ -100,7 +133,7 @@
           <div class="estimator-dd" id="pf-risk-dd-root">
             <button type="button" class="estimator-dd-btn" id="pf-risk-dd-btn" aria-haspopup="listbox" aria-expanded="false">
               <span id="pf-risk-dd-label">Balanced</span>
-              <span class="est-dd-chev" aria-hidden="true">▾</span>
+              <span class="est-dd-chev" aria-hidden="true">&#x25BE;</span>
             </button>
             <div class="estimator-dd-menu" id="pf-risk-dd-menu" role="listbox" hidden>
               <button type="button" class="estimator-dd-opt" data-risk="low" role="option">Conservative</button>
@@ -111,45 +144,15 @@
         </div>
         <div class="form-group">
           <label class="form-label">Gross payout if Yes ($)</label>
-          <div id="pf-out-yes" class="estimator-out">—</div>
+          <div id="pf-out-yes" class="estimator-out">-</div>
         </div>
         <div class="form-group">
           <label class="form-label">Profit if Yes ($)</label>
-          <div id="pf-maxp" class="estimator-out">—</div>
+          <div id="pf-maxp" class="estimator-out">-</div>
         </div>
       </div>
       <button type="button" class="btn btn-primary" onclick="profitCalc()">Update</button>
       <div id="pf-trader-summary" class="estimator-summary"></div>
-    </div>
-
-    <div class="section rules-at-a-glance">
-      <div class="section-tag">Before you trade</div>
-      <h2>Rules at a glance</h2>
-      <p class="rules-at-a-glance-lead">Quick summary — full details are on the <a href="#" data-page="rules" class="inline-link">Rules</a> page and in <a href="#" data-page="accounts" class="inline-link">Accounts</a> after you sign in.</p>
-      <div class="rules-glance-grid">
-        <div class="rules-glance-card"><span class="rg-num">01</span><h4>Profit target</h4><p>Hit your % target within the evaluation window (e.g. 10% one-step).</p></div>
-        <div class="rules-glance-card"><span class="rg-num">02</span><h4>Max drawdown</h4><p>Stay below the drawdown limit from your high-water mark.</p></div>
-        <div class="rules-glance-card"><span class="rg-num">03</span><h4>Consistency</h4><p>No single winning trade can be too large vs. total profit.</p></div>
-        <div class="rules-glance-card"><span class="rg-num">04</span><h4>Min trades & sizing</h4><p>Meet minimum trades; max position size per rules.</p></div>
-      </div>
-    </div>
-
-    <div class="payment-marquee-wrap" aria-hidden="true">
-      <div class="payment-marquee-fade payment-marquee-fade--l"></div>
-      <div class="payment-marquee-fade payment-marquee-fade--r"></div>
-      <div class="payment-marquee-viewport">
-        <div class="payment-marquee-track">
-          <div class="payment-marquee-set">
-            <span class="pay-chip pay-chip--icononly" title="Visa"><img class="pay-chip-img" src="https://cdn.simpleicons.org/visa/1434CB" alt="Visa" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Mastercard"><img class="pay-chip-img" src="https://cdn.simpleicons.org/mastercard/EB001B" alt="Mastercard" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Apple Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/applepay/FFFFFF" alt="Apple Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Google Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/googlepay/4285F4" alt="Google Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="PayPal"><img class="pay-chip-img" src="https://cdn.simpleicons.org/paypal/003087" alt="PayPal" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Discover"><img class="pay-chip-img" src="https://cdn.simpleicons.org/discover/FF6000" alt="Discover" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="USDC"><span class="pay-chip-badge pay-chip-badge--usdc pay-chip-badge--lrg" aria-hidden="true">$</span></span>
-          </div>
-          <div class="payment-marquee-set" aria-hidden="true">
-            <span class="pay-chip pay-chip--icononly" title="Visa"><img class="pay-chip-img" src="https://cdn.simpleicons.org/visa/1434CB" alt="Visa" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Mastercard"><img class="pay-chip-img" src="https://cdn.simpleicons.org/mastercard/EB001B" alt="Mastercard" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Apple Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/applepay/FFFFFF" alt="Apple Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Google Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/googlepay/4285F4" alt="Google Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="PayPal"><img class="pay-chip-img" src="https://cdn.simpleicons.org/paypal/003087" alt="PayPal" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Discover"><img class="pay-chip-img" src="https://cdn.simpleicons.org/discover/FF6000" alt="Discover" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="USDC"><span class="pay-chip-badge pay-chip-badge--usdc pay-chip-badge--lrg" aria-hidden="true">$</span></span>
-          </div>
-          <div class="payment-marquee-set" aria-hidden="true">
-            <span class="pay-chip pay-chip--icononly" title="Visa"><img class="pay-chip-img" src="https://cdn.simpleicons.org/visa/1434CB" alt="Visa" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Mastercard"><img class="pay-chip-img" src="https://cdn.simpleicons.org/mastercard/EB001B" alt="Mastercard" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Apple Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/applepay/FFFFFF" alt="Apple Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Google Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/googlepay/4285F4" alt="Google Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="PayPal"><img class="pay-chip-img" src="https://cdn.simpleicons.org/paypal/003087" alt="PayPal" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Discover"><img class="pay-chip-img" src="https://cdn.simpleicons.org/discover/FF6000" alt="Discover" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="USDC"><span class="pay-chip-badge pay-chip-badge--usdc pay-chip-badge--lrg" aria-hidden="true">$</span></span>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="section">
@@ -174,65 +177,49 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-tag">FAQ</div>
-      <h2>Common Questions</h2>
-      <div class="faq-container">
-        <div class="faq-item">
-          <div class="faq-q">What markets can I bet on? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">You can bet on any active market on Polymarket. We track your positions through the platform's public API. Political, crypto, sports, entertainment — any market is fair game.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">How does the consistency rule work? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">No single trade can account for more than a set percentage of your total profits. This ensures you're a consistent trader, not just lucky on one big bet.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">What happens if I fail? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">If you breach the drawdown limit or time runs out without hitting the target, the evaluation ends. You can purchase a new challenge and try again at any time.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">How do payouts work? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">Funded traders keep 80% of profits. Payouts are processed in USDC on a bi-weekly basis once you hit the minimum payout threshold.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">Is this real money? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">The evaluation uses simulated balance tracking. Once funded, you trade with our real capital on Polymarket. Profits and payouts are in real USDC.</div>
+    <div class="section rules-at-a-glance">
+      <div class="section-tag">Before you trade</div>
+      <h2>Rules at a glance</h2>
+      <p class="rules-at-a-glance-lead">Quick summary. Full details are on the <a href="#" data-page="rules" class="inline-link">Rules</a> page and in <a href="#" data-page="accounts" class="inline-link">Accounts</a> after you sign in.</p>
+      <div class="rules-glance-grid">
+        <div class="rules-glance-card"><span class="rg-num">01</span><h4>Profit target</h4><p>Hit your % target within the evaluation window (e.g. 10% one-step).</p></div>
+        <div class="rules-glance-card"><span class="rg-num">02</span><h4>Max drawdown</h4><p>Stay below the drawdown limit from your high-water mark.</p></div>
+        <div class="rules-glance-card"><span class="rg-num">03</span><h4>Consistency</h4><p>No single winning trade can be too large vs. total profit.</p></div>
+        <div class="rules-glance-card"><span class="rg-num">04</span><h4>Min trades &amp; sizing</h4><p>Meet minimum trades; max position size per rules.</p></div>
+      </div>
+    </div>
+
+    <div class="payment-marquee-wrap" aria-hidden="true">
+      <div class="payment-marquee-fade payment-marquee-fade--l"></div>
+      <div class="payment-marquee-fade payment-marquee-fade--r"></div>
+      <div class="payment-marquee-viewport">
+        <div class="payment-marquee-track" id="pay-marquee-home">
+          <!-- Populated by JS for seamless loop -->
         </div>
       </div>
     </div>
 
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <div class="section">
+      <div class="section-tag">FAQ</div>
+      <h2>Advice and answers from the PolyEdge Team</h2>
+      <div class="faq-hub" id="faq-hub-home">
+        <!-- Rendered by faqEngine.js -->
+      </div>
+    </div>
+
+    <footer>&copy; 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== FAQ PAGE ========== -->
   <div id="page-faq" class="page">
     <div class="section">
       <div class="section-tag">FAQ</div>
-      <h2>Common Questions</h2>
-      <div class="faq-container">
-        <div class="faq-item">
-          <div class="faq-q">What markets can I bet on? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">You can bet on any active market on Polymarket. We track your positions through the platform's public API. Political, crypto, sports, entertainment — any market is fair game.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">How does the consistency rule work? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">No single trade can account for more than a set percentage of your total profits. This ensures you're a consistent bettor, not just lucky on one big bet.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">What happens if I fail? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">If you breach the drawdown limit or time runs out without hitting the target, the evaluation ends. You can purchase a new challenge and try again at any time.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">How do payouts work? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">Funded bettors keep 80% of profits. Payouts are processed in USDC on a bi-weekly basis once you hit the minimum payout threshold.</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">Is this real money? <span class="arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></div>
-          <div class="faq-a">The evaluation uses simulated balance tracking. Once funded, you bet with our real capital on Polymarket. Profits and payouts are in real USDC.</div>
-        </div>
+      <h2>Advice and answers from the PolyEdge Team</h2>
+      <div class="faq-hub" id="faq-hub-page">
+        <!-- Rendered by FaqEngine -->
       </div>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>&copy; 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== CHALLENGES ========== -->
@@ -362,20 +349,12 @@
       <div class="payment-marquee-fade payment-marquee-fade--l"></div>
       <div class="payment-marquee-fade payment-marquee-fade--r"></div>
       <div class="payment-marquee-viewport">
-        <div class="payment-marquee-track">
-          <div class="payment-marquee-set">
-            <span class="pay-chip pay-chip--icononly" title="Visa"><img class="pay-chip-img" src="https://cdn.simpleicons.org/visa/1434CB" alt="Visa" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Mastercard"><img class="pay-chip-img" src="https://cdn.simpleicons.org/mastercard/EB001B" alt="Mastercard" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Apple Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/applepay/FFFFFF" alt="Apple Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Google Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/googlepay/4285F4" alt="Google Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="PayPal"><img class="pay-chip-img" src="https://cdn.simpleicons.org/paypal/003087" alt="PayPal" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Discover"><img class="pay-chip-img" src="https://cdn.simpleicons.org/discover/FF6000" alt="Discover" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="USDC"><span class="pay-chip-badge pay-chip-badge--usdc pay-chip-badge--lrg" aria-hidden="true">$</span></span>
-          </div>
-          <div class="payment-marquee-set" aria-hidden="true">
-            <span class="pay-chip pay-chip--icononly" title="Visa"><img class="pay-chip-img" src="https://cdn.simpleicons.org/visa/1434CB" alt="Visa" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Mastercard"><img class="pay-chip-img" src="https://cdn.simpleicons.org/mastercard/EB001B" alt="Mastercard" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Apple Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/applepay/FFFFFF" alt="Apple Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Google Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/googlepay/4285F4" alt="Google Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="PayPal"><img class="pay-chip-img" src="https://cdn.simpleicons.org/paypal/003087" alt="PayPal" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Discover"><img class="pay-chip-img" src="https://cdn.simpleicons.org/discover/FF6000" alt="Discover" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="USDC"><span class="pay-chip-badge pay-chip-badge--usdc pay-chip-badge--lrg" aria-hidden="true">$</span></span>
-          </div>
-          <div class="payment-marquee-set" aria-hidden="true">
-            <span class="pay-chip pay-chip--icononly" title="Visa"><img class="pay-chip-img" src="https://cdn.simpleicons.org/visa/1434CB" alt="Visa" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Mastercard"><img class="pay-chip-img" src="https://cdn.simpleicons.org/mastercard/EB001B" alt="Mastercard" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Apple Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/applepay/FFFFFF" alt="Apple Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Google Pay"><img class="pay-chip-img" src="https://cdn.simpleicons.org/googlepay/4285F4" alt="Google Pay" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="PayPal"><img class="pay-chip-img" src="https://cdn.simpleicons.org/paypal/003087" alt="PayPal" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="Discover"><img class="pay-chip-img" src="https://cdn.simpleicons.org/discover/FF6000" alt="Discover" width="40" height="40" loading="lazy" decoding="async"></span><span class="pay-chip pay-chip--icononly" title="USDC"><span class="pay-chip-badge pay-chip-badge--usdc pay-chip-badge--lrg" aria-hidden="true">$</span></span>
-          </div>
+        <div class="payment-marquee-track" id="pay-marquee-challenges">
+          <!-- Populated by JS -->
         </div>
       </div>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>&copy; 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== RULES ========== -->
@@ -414,7 +393,7 @@
         </div>
       </div>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== LEADERBOARD ========== -->
@@ -426,7 +405,7 @@
         <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
       </div>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== WALLET (Polymarket on-chain portfolio) ========== -->
@@ -434,7 +413,7 @@
     <div id="analytics-content">
       <!-- Rendered by analytics.js -->
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== DASHBOARD (evaluation stats / PolyEdge internal) ========== -->
@@ -442,7 +421,7 @@
     <div id="stats-content" style="max-width:1200px;margin:0 auto;padding:28px 32px">
       <!-- Rendered by app.js (Supabase evaluation stats) -->
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== MARKETS (evaluation + live Polymarket browse) ========== -->
@@ -450,7 +429,7 @@
     <div id="dash-content">
       <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== ACCOUNTS ========== -->
@@ -458,7 +437,7 @@
     <div id="accounts-content" style="padding:20px">
       <p style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:12px">Loading...</p>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== CERTIFICATES ========== -->
@@ -468,7 +447,7 @@
         <!-- Rendered by loadCertificate in app.js -->
       </div>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== EDUCATION ========== -->
@@ -502,7 +481,7 @@
         <div class="edu-block">
           <div class="edu-num">04</div>
           <h3>Expected Value</h3>
-          <p>Profitable prediction market trading is fundamentally about finding mispriced contracts — situations where the true probability of an event differs from the price the market assigns. If you believe an event has a 75% chance of occurring but the market prices it at 60%, buying that contract has positive expected value.</p>
+          <p>Profitable prediction market trading is fundamentally about finding mispriced contracts, situations where the true probability of an event differs from the price the market assigns. If you believe an event has a 75% chance of occurring but the market prices it at 60%, buying that contract has positive expected value.</p>
           <p>Expected value (EV) = (Probability × Payout) − Cost. Consistent profitability requires disciplined analysis and a systematic approach to identifying edge.</p>
         </div>
 
@@ -524,11 +503,11 @@
           <div class="edu-num">07</div>
           <h3>Potential Upside</h3>
           <p>Prediction markets are a rapidly growing asset class with expanding coverage across politics, economics, sports, technology, and current events. As these markets mature, liquidity deepens and the range of tradable events expands.</p>
-          <p>For skilled analysts with domain expertise, prediction markets offer a unique opportunity to monetize knowledge and analytical ability. Unlike traditional financial markets, prediction markets reward subject-matter expertise directly — if you understand politics, science, technology, or any other domain better than the average market participant, you have a structural edge.</p>
+          <p>For skilled analysts with domain expertise, prediction markets offer a unique opportunity to monetize knowledge and analytical ability. Unlike traditional financial markets, prediction markets reward subject-matter expertise directly. If you understand politics, science, technology, or any other domain better than the average market participant, you have a structural edge.</p>
         </div>
       </div>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== PROFIT ESTIMATOR ========== -->
@@ -625,10 +604,10 @@
       <div class="settings-card" style="margin-top:24px">
         <h3 class="settings-subh">Data</h3>
         <p class="settings-hint">Export your challenge history for your records.</p>
-        <button type="button" class="form-btn secondary" style="width:auto" onclick="alert('Export will include trades and evaluations — wiring to Supabase next.')">Request data export</button>
+        <button type="button" class="form-btn secondary" style="width:auto" onclick="alert('Export will include trades and evaluations. Wiring to Supabase next.')">Request data export</button>
       </div>
     </div>
-    <footer>© 2025 PolyEdge — All Rights Reserved</footer>
+    <footer>© 2025 PolyEdge. All Rights Reserved</footer>
   </div>
 
   <!-- ========== ADMIN ========== -->
@@ -793,7 +772,7 @@
       </div>
       <div class="bottom-nav-group">
         <span class="bottom-nav-label">PolyEdge</span>
-        <span class="bottom-nav-copy bottom-nav-copy--full">© 2025 PolyEdge — All Rights Reserved</span>
+        <span class="bottom-nav-copy bottom-nav-copy--full">© 2025 PolyEdge. All Rights Reserved</span>
       </div>
     </div>
   </div>
@@ -810,9 +789,22 @@
   <script src="js/matrixRain.js"></script>
   <script src="js/loginNetwork.js"></script>
   <script src="js/homepageAnimations.js"></script>
+  <script src="js/formatUtils.js?v=1"></script>
+  <script src="js/odometer.js?v=1"></script>
+  <script src="js/homepageEngine.js?v=1"></script>
   <script src="js/analytics.js?v=18"></script>
-  <script src="js/app.js?v=25"></script>
+  <script src="js/app.js?v=26"></script>
   <script src="js/terminalBg.js"></script>
+
+<script>
+// Init FAQ on the dedicated FAQ page when it becomes visible
+document.addEventListener('DOMContentLoaded', function() {
+  // Also init challenges marquee
+  if (typeof PaymentMarquee !== 'undefined') {
+    PaymentMarquee.init('pay-marquee-challenges');
+  }
+});
+</script>
 
 </body>
 </html>
