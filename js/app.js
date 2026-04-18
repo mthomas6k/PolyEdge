@@ -755,6 +755,58 @@ function refreshMarkets() {
   loadLiveMarkets(input?.value?.trim() || '');
 }
 
+window.EstimatorFormatters = {
+  maskSize: function(el) {
+    if (!el.value) return;
+    const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(clean)) {
+      el.value = FormatUtils.money(clean, { decimals: 2 });
+    }
+  },
+  unmaskSize: function(el) {
+    if (!el.value) return;
+    const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(clean)) {
+      el.value = clean.toString();
+    }
+  },
+  maskCents: function(el) {
+    if (!el.value) return;
+    const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(clean)) {
+      el.value = clean.toFixed(2) + '¢';
+    }
+  },
+  unmaskCents: function(el) {
+    if (!el.value) return;
+    const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(clean)) {
+      el.value = clean.toString();
+    }
+  }
+};
+
+function initEstimatorFormatters() {
+  const szEl = document.getElementById('pf-size');
+  const enEl = document.getElementById('pf-entry');
+  if (szEl) {
+    szEl.addEventListener('blur', () => window.EstimatorFormatters.maskSize(szEl));
+    szEl.addEventListener('focus', () => window.EstimatorFormatters.unmaskSize(szEl));
+    // initial format
+    window.EstimatorFormatters.maskSize(szEl);
+  }
+  if (enEl) {
+    enEl.addEventListener('blur', () => window.EstimatorFormatters.maskCents(enEl));
+    enEl.addEventListener('focus', () => window.EstimatorFormatters.unmaskCents(enEl));
+    // initial format
+    window.EstimatorFormatters.maskCents(enEl);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initEstimatorFormatters();
+});
+
 function profitCalc() {
   const szEl = document.getElementById('pf-size');
   const enEl = document.getElementById('pf-entry');
@@ -764,23 +816,31 @@ function profitCalc() {
   const rkEl = document.getElementById('pf-risk');
   const sumEl = document.getElementById('pf-trader-summary');
   if (!szEl || !enEl || !yEl || !pEl) return;
-  const sz = parseFloat(szEl.value) || 0;
-  const entry = (parseFloat(enEl.value) || 0) / 100;
+  
+  const cleanSz = szEl.value.replace(/[^0-9.]/g, '');
+  const cleanEn = enEl.value.replace(/[^0-9.]/g, '');
+  
+  const sz = parseFloat(cleanSz) || 0;
+  const entry = (parseFloat(cleanEn) || 0) / 100;
   const winrate = wrEl ? (parseFloat(wrEl.value) || 50) / 100 : 0.5;
   const risk = rkEl ? rkEl.value : 'med';
+  
   if (entry <= 0 || entry >= 1 || sz <= 0) {
     yEl.textContent = '-';
     pEl.textContent = '-';
     if (sumEl) sumEl.textContent = '';
     return;
   }
+  
   const shares = sz / entry;
   const payoutIfYes = shares;
-  yEl.textContent = '$' + payoutIfYes.toFixed(2);
-  pEl.textContent = '$' + (payoutIfYes - sz).toFixed(2);
+  const profit = payoutIfYes - sz;
+  
+  yEl.textContent = FormatUtils.money(payoutIfYes, { decimals: 2 });
+  pEl.textContent = FormatUtils.money(profit, { decimals: 2 });
 
   if (sumEl) {
-    const ev = winrate * (payoutIfYes - sz) - (1 - winrate) * sz;
+    const ev = winrate * profit - (1 - winrate) * sz;
     const riskNote =
       risk === 'low'
         ? 'You skew conservative. Size down and favor liquid markets.'
@@ -793,8 +853,9 @@ function profitCalc() {
         : ev > 0
           ? 'Edge looks thin. Small edge, high variance.'
           : '<strong>EV is negative</strong> at these inputs. You would need a higher hit rate or cheaper entry.';
+    
     sumEl.innerHTML =
-      `<p><strong>Expected value (rough):</strong> ${ev >= 0 ? '+' : ''}$${ev.toFixed(2)} per trial <span style="color:var(--text3)">(ignores fees/slippage)</span>.</p>` +
+      `<p><strong>Expected value (rough):</strong> ${ev >= 0 ? '+' : ''}${FormatUtils.money(ev, { decimals: 2 })} per trial <span style="color:var(--text3)">(ignores fees/slippage)</span>.</p>` +
       `<p>${edge}</p>` +
       `<p><strong>Profile:</strong> ${riskNote}</p>` +
       '<p style="color:var(--text3);font-size:13px;margin-top:8px">This is educational math only, not financial advice.</p>';

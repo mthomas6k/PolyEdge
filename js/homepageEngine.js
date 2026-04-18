@@ -2,10 +2,11 @@
 // HOMEPAGE ENGINE - Snowflakes, Globe, Payment Marquee, FAQ, Hero Cycle
 // ==========================================
 
-// ---- SNOWFALL ----
+// ---- SNOWFALL & SPOTLIGHT ----
 const Snowfall = (() => {
   let canvas, ctx, particles = [], animId, active = false;
   const COUNT = 35;
+  let t = 0; // for spotlight drifting
 
   function init() {
     canvas = document.getElementById('snowfall-canvas');
@@ -38,17 +39,66 @@ const Snowfall = (() => {
   function loop() {
     if (!active || !ctx || !canvas) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    t += 0.002;
+
+    const hero = document.querySelector('.hero');
+    const heroBottom = hero ? hero.getBoundingClientRect().bottom : 0;
+
+    // Drifting Spotlight (center -> right -> center -> left)
+    // Map a sine wave so it idles gently using Math.sin
+    const w = canvas.width, h = canvas.height;
+    const spotX = w / 2 + Math.sin(t) * (w * 0.25);
+    // Position spotlight lower so it hits the calculator area (e.g. 70% down viewport)
+    const spotY = h * 0.7; 
+    const spotRadius = w < 800 ? w * 0.7 : 500;
+
+    // We only draw spotlight if it's below the hero
+    if (spotY + spotRadius > heroBottom) {
+      const grad = ctx.createRadialGradient(spotX, spotY, 0, spotX, spotY, spotRadius);
+      grad.addColorStop(0, 'rgba(56,136,232, 0.15)');
+      grad.addColorStop(0.5, 'rgba(56,136,232, 0.05)');
+      grad.addColorStop(1, 'transparent');
+      
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, Math.max(0, heroBottom), w, h);
+    }
+
     particles.forEach(p => {
       p.y += p.speed;
       p.x += p.drift;
       if (p.y > canvas.height + 5 || p.x < -5 || p.x > canvas.width + 5) {
         Object.assign(p, createParticle(false));
       }
+      
+      // Do not render over the hero block
+      if (p.y < heroBottom) return;
+
+      // Distance to spotlight center
+      const dx = p.x - spotX;
+      const dy = p.y - spotY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${p.opacity})`;
+      
+      if (dist < spotRadius) {
+        // Boost opacity near center of spotlight, assign blue tint
+        const intensity = 1 - (dist / spotRadius);
+        ctx.fillStyle = `rgba(200, 230, 255, ${p.opacity + (intensity * 0.6)})`;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(56, 136, 232, 0.8)';
+      } else {
+        // Normal dim flurries outside
+        ctx.fillStyle = `rgba(180, 210, 255, ${p.opacity * 0.6})`;
+        ctx.shadowBlur = 0;
+      }
+      
       ctx.fill();
     });
+
+    // Reset shadow blur
+    ctx.shadowBlur = 0;
+    
     animId = requestAnimationFrame(loop);
   }
 
@@ -144,6 +194,58 @@ const GlobeRenderer = (() => {
 
     rotation += 0.003;
     animId = requestAnimationFrame(loop);
+  }
+
+  return { init };
+})();
+
+// ---- GLOBE TYPEWRITER ----
+const GlobeTypewriter = (() => {
+  const TOPICS = [
+    'Trump', 'Benjamin Netanyahu', 'United States Politics', 'Anthropic',
+    'Gemini', 'Google', 'Amazon', 'Elon Musk', 'Iran', 'Israel', 'Venezuela',
+    'World Series', 'Premier League', 'Federal Reserve', 'Taylor Swift',
+    'NBA Finals', 'Bitcoin', 'Supreme Court', 'OpenAI', 'FIFA World Cup',
+    'Nvidia', 'Climate Policy', 'North Korea', 'SpaceX'
+  ];
+  let target, isDeleting = false, txt = '', loopNum = 0, typingSpeed = 100, pauseMs = 5000;
+
+  function type() {
+    if (!target) target = document.getElementById('globe-typewriter-target');
+    if (!target) return;
+
+    // Shuffle the topic picking strategy to truly random, ignoring sequential loopNum if desired, 
+    // but a sequential shuffled list works well. To make it truly random each time:
+    const i = loopNum % TOPICS.length;
+    let fullTxt = TOPICS[i];
+
+    if (isDeleting) {
+      txt = fullTxt.substring(0, txt.length - 1);
+      typingSpeed = 40; // faster backspace
+    } else {
+      txt = fullTxt.substring(0, txt.length + 1);
+      typingSpeed = 80 + Math.random() * 50; // somewhat human typing pacing
+    }
+
+    target.textContent = txt;
+
+    let delta = typingSpeed;
+
+    if (!isDeleting && txt === fullTxt) {
+      delta = pauseMs;
+      isDeleting = true;
+    } else if (isDeleting && txt === '') {
+      isDeleting = false;
+      // Randomize next array index to prevent predictable loops
+      loopNum = Math.floor(Math.random() * TOPICS.length);
+      delta = 500;
+    }
+
+    setTimeout(type, delta);
+  }
+
+  function init() {
+    setTimeout(type, 1000);
   }
 
   return { init };
@@ -301,10 +403,13 @@ const FaqEngine = (() => {
           <svg class="faq-cat-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
         <div class="faq-articles">
-          ${cat.articles.map(a => `<div class="faq-article-link" onclick="FaqEngine.openArticle('${cat.id}','${a.id}','${container.id}')">
+          ${cat.articles.map(a => {
+            const isRead = sessionStorage.getItem(`faq_read_${a.id}`) ? ' faq-article-read' : '';
+            return `<div class="faq-article-link${isRead}" onclick="FaqEngine.openArticle('${cat.id}','${a.id}','${container.id}')">
             <span>${a.q}</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>`).join('')}
+          </div>`;
+          }).join('')}
         </div>
       </div>`;
     });
@@ -317,8 +422,14 @@ const FaqEngine = (() => {
     const art = cat ? cat.articles.find(a => a.id === currentArticle) : null;
     if (!cat || !art) { currentView = 'list'; render(container.id); return; }
 
+    // Mark as read in session
+    sessionStorage.setItem(`faq_read_${art.id}`, 'true');
+
     container.innerHTML = `<div class="faq-article-view">
-      <div class="faq-breadcrumb">
+      <button class="btn btn-ghost faq-back-btn" onclick="FaqEngine.backToCat('${cat.id}','${container.id}')">
+        &larr; Back to FAQ Categories
+      </button>
+      <div class="faq-breadcrumb" style="margin-top: 16px;">
         <a onclick="FaqEngine.backToList('${container.id}')">All Collections</a>
         <span class="faq-breadcrumb-sep">&rsaquo;</span>
         <a onclick="FaqEngine.backToCat('${cat.id}','${container.id}')">${cat.title}</a>
@@ -370,8 +481,9 @@ const FaqEngine = (() => {
   }
 
   function vote(btn, type) {
-    const btns = btn.parentElement.querySelectorAll('.faq-helpful-btn');
-    btns.forEach(b => b.classList.add('voted'));
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.faq-helpful-btn').forEach(b => b.classList.remove('voted'));
+    btn.classList.add('voted');
   }
 
   function search(query, containerId) {
@@ -420,31 +532,50 @@ const FaqEngine = (() => {
 
 // ---- HERO CYCLING COUNTER ----
 const HeroCycle = (() => {
+  let animRaf = null;
   function init() {
     const el = document.getElementById('hero-trade-with');
     if (!el) return;
     const values = (el.dataset.cycle || '500,1000,2000').split(',').map(Number);
     const prefix = el.dataset.prefix || '$';
     let idx = 0;
-
+    
+    // Clear out Odometer classes if any exist
+    el.classList.remove('odo-wrap');
+    
     function formatVal(n) {
-      return prefix + n.toLocaleString();
+      return prefix + Math.floor(n).toLocaleString();
     }
 
-    // Initial render with odometer
-    if (typeof Odometer !== 'undefined') {
-      Odometer.render(el, formatVal(values[0]));
-    }
+    el.textContent = formatVal(values[0]);
+    let currentVal = values[0];
 
     setInterval(() => {
       idx = (idx + 1) % values.length;
-      const str = formatVal(values[idx]);
-      if (typeof Odometer !== 'undefined') {
-        Odometer.update(el, str);
-      } else {
-        el.textContent = str;
+      const targetVal = values[idx];
+      const startVal = currentVal;
+      const t0 = performance.now();
+      const dur = 800; // Duration of spinning effect
+
+      if (animRaf) cancelAnimationFrame(animRaf);
+      
+      function tick(now) {
+        const t = Math.min(1, (now - t0) / dur);
+        // Easing out cubic: fast start, slow finish
+        const ease = 1 - Math.pow(1 - t, 3);
+        currentVal = startVal + (targetVal - startVal) * ease;
+        el.textContent = formatVal(currentVal);
+        
+        if (t < 1) {
+          animRaf = requestAnimationFrame(tick);
+        } else {
+          currentVal = targetVal;
+          el.textContent = formatVal(targetVal);
+        }
       }
-    }, 3000);
+      animRaf = requestAnimationFrame(tick);
+      
+    }, 4000);
   }
 
   return { init };
@@ -454,6 +585,7 @@ const HeroCycle = (() => {
 document.addEventListener('DOMContentLoaded', () => {
   Snowfall.init();
   GlobeRenderer.init();
+  GlobeTypewriter.init();
   PaymentMarquee.init('pay-marquee-home');
   FaqEngine.render('faq-hub-home');
   HeroCycle.init();

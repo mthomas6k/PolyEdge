@@ -85,43 +85,31 @@
         <div class="globe-ring"></div>
         <div class="globe-ring globe-ring--2"></div>
         <div class="globe-cats">
-          <div class="globe-cat globe-cat--politics"><span class="globe-cat-icon">🏛</span> Politics</div>
-          <div class="globe-cat globe-cat--events">Current Events <span class="globe-cat-icon">🌍</span></div>
-          <div class="globe-cat globe-cat--crypto"><span class="globe-cat-icon">₿</span> Crypto</div>
-          <div class="globe-cat globe-cat--economy">Economy <span class="globe-cat-icon">📈</span></div>
-          <div class="globe-cat globe-cat--entertainment"><span class="globe-cat-icon">🎬</span> Entertainment</div>
-          <div class="globe-cat globe-cat--sports">Sports <span class="globe-cat-icon">🏀</span></div>
+          <div class="globe-cat globe-cat--politics"><span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 20v-7.826a4 4 0 0 0-1.253-2.908l-7.373-7.051a2 2 0 0 0-2.748 0L3.253 9.266A4 4 0 0 0 2 12.174V20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2z"/><rect x="9" y="10" width="6" height="12"/></svg></span> Politics</div>
+          <div class="globe-cat globe-cat--events">Current Events <span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span></div>
+          <div class="globe-cat globe-cat--crypto"><span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Crypto</div>
+          <div class="globe-cat globe-cat--economy">Economy <span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span></div>
+          <div class="globe-cat globe-cat--entertainment"><span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Entertainment</div>
+          <div class="globe-cat globe-cat--sports">Sports <span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span></div>
         </div>
       </div>
-      <div class="globe-stats">
-        <div class="globe-stat">
-          <div class="globe-stat-num" id="globe-stat-markets" data-odo="10,000"><span class="odo-wrap">10,000</span><span class="globe-stat-suffix">+</span></div>
-          <div class="globe-stat-label">Live prediction markets</div>
-        </div>
-        <div class="globe-stat">
-          <div class="globe-stat-num" id="globe-stat-traders" data-odo="2,847"><span class="odo-wrap">2,847</span></div>
-          <div class="globe-stat-label">Active funded traders</div>
-        </div>
-        <div class="globe-stat">
-          <div class="globe-stat-num" id="globe-stat-countries" data-odo="32"><span class="odo-wrap">32</span><span class="globe-stat-suffix">+</span></div>
-          <div class="globe-stat-label">Countries with active traders</div>
-        </div>
+      <div class="globe-typewriter-container" style="font-family: var(--sans); font-size: 20px; font-weight: 500; color: #fff; margin-top: 10px;">
+        Place trades on <span id="globe-typewriter-target" style="color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 700;"></span><span class="globe-cursor" style="color: var(--accent); animation: blink 1s step-end infinite;">|</span>
       </div>
     </div>
 
     <div id="home-estimator" class="section home-estimator">
-      <div class="estimator-spotlight"></div>
       <div class="section-tag">Tools</div>
       <h2>Position &amp; risk estimator</h2>
       <p class="estimator-lead">Sketch payouts and expected value. Tune win-rate and risk to see a plain-English trader profile, no wallet required.</p>
       <div class="estimator-grid">
         <div class="form-group">
           <label class="form-label">Size ($ deployed)</label>
-          <input class="form-input" id="pf-size" type="number" min="1" step="1" value="100" oninput="profitCalc()">
+          <input class="form-input" id="pf-size" type="text" inputmode="decimal" value="100" oninput="profitCalc()">
         </div>
         <div class="form-group">
           <label class="form-label">Avg entry (cents)</label>
-          <input class="form-input" id="pf-entry" type="number" min="1" max="99" step="1" value="45" oninput="profitCalc()">
+          <input class="form-input" id="pf-entry" type="text" inputmode="decimal" value="45" oninput="profitCalc()">
         </div>
         <div class="form-group">
           <label class="form-label">Your win rate guess (%)</label>
