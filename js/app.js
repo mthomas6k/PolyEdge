@@ -1,6 +1,6 @@
 
 // ==========================================
-// CONFIG (uses js/config.js — set window.__POLYEDGE_ENV in production to avoid hardcoding)
+// CONFIG (uses js/config.js - set window.__POLYEDGE_ENV in production to avoid hardcoding)
 // ==========================================
 var SUPABASE_URL = (typeof window !== 'undefined' && window.POLYEDGE_CONFIG) ? window.POLYEDGE_CONFIG.SUPABASE_URL : '';
 var SUPABASE_KEY = (typeof window !== 'undefined' && window.POLYEDGE_CONFIG) ? window.POLYEDGE_CONFIG.SUPABASE_ANON_KEY : '';
@@ -30,7 +30,7 @@ function getSiteBaseUrl() {
 }
 
 // ==========================================
-// SUPABASE INIT (anon key only — never use service_role in frontend)
+// SUPABASE INIT (anon key only - never use service_role in frontend)
 // ==========================================
 var sb = typeof sb !== 'undefined' ? sb : null;
 try {
@@ -276,12 +276,12 @@ function pmFmtVol(v) {
 }
 
 function pmFmtDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   try {
     const d = new Date(iso);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   } catch (e) {
-    return '—';
+    return '-';
   }
 }
 
@@ -375,12 +375,14 @@ function buildCategoryPills(rawList) {
 
 function renderPmCard(m, canBet, idx) {
   const pm = PolymarketService.parseMarket(m);
-  const yesP = Math.round(pm.yesPrice * 100);
-  const noP = Math.round(pm.noPrice * 100);
+  const yesRaw = pm.yesPrice * 100;
+  const noRaw = pm.noPrice * 100;
+  const yesP = yesRaw < 1 && yesRaw > 0 ? yesRaw.toFixed(1) : Math.round(yesRaw);
+  const noP = noRaw < 1 && noRaw > 0 ? noRaw.toFixed(1) : Math.round(noRaw);
   const pct = yesP;
   const slug = pm.slug || '';
   const uid = pmHashStr(slug + idx) % 100000;
-  const polyUrl = pm.question ? `https://polymarket.com/predictions?query=${encodeURIComponent(pm.question)}` : 'https://polymarket.com';
+  const polyUrl = slug ? `https://polymarket.com/event/${slug}` : (pm.question ? `https://polymarket.com/predictions?query=${encodeURIComponent(pm.question)}` : 'https://polymarket.com');
   const img = pm.image
     ? `<img class="pm-card-img" src="${String(pm.image).replace(/"/g, '&quot;')}" alt="" loading="lazy" onerror="this.style.display='none'">`
     : `<div class="pm-card-img pm-card-img-ph">◆</div>`;
@@ -421,11 +423,13 @@ function renderPmCard(m, canBet, idx) {
 
 function renderFeaturedCard(m, canBet, idx) {
   const pm = PolymarketService.parseMarket(m);
-  const yesP = Math.round(pm.yesPrice * 100);
-  const noP = Math.round(pm.noPrice * 100);
+  const yesRaw = pm.yesPrice * 100;
+  const noRaw = pm.noPrice * 100;
+  const yesP = yesRaw < 1 && yesRaw > 0 ? yesRaw.toFixed(1) : Math.round(yesRaw);
+  const noP = noRaw < 1 && noRaw > 0 ? noRaw.toFixed(1) : Math.round(noRaw);
   const slug = pm.slug || '';
   const uid = pmHashStr('feat' + slug) % 100000;
-  const polyUrl = pm.question ? `https://polymarket.com/predictions?query=${encodeURIComponent(pm.question)}` : 'https://polymarket.com';
+  const polyUrl = slug ? `https://polymarket.com/event/${slug}` : (pm.question ? `https://polymarket.com/predictions?query=${encodeURIComponent(pm.question)}` : 'https://polymarket.com');
   const dis = canBet ? '' : ' disabled';
   const onY = canBet ? `onclick="openMarketBetByIdx(${idx},'YES')"` : '';
   const onN = canBet ? `onclick="openMarketBetByIdx(${idx},'NO')"` : '';
@@ -507,7 +511,7 @@ function polyMarketRedraw() {
   const startIdx = !searching && feat && filtered.length > 1 ? 1 : 0;
   const gridSlice = filtered.slice(startIdx);
   if (gridSlice.length === 0) {
-    grid.innerHTML = '<div class="market-loading" style="padding:12px 0">Only one market in this view — see featured above.</div>';
+    grid.innerHTML = '<div class="market-loading" style="padding:12px 0">Only one market in this view. See featured above.</div>';
   } else {
     grid.innerHTML = gridSlice.map((m, i) => renderPmCard(m, canBet, startIdx + i)).join('');
   }
@@ -556,7 +560,7 @@ function updateNavTicker(markets) {
   const parts = slice.map((m, i) => {
     const pm = PolymarketService.parseMarket(m);
     const p = Math.round(pm.yesPrice * 100);
-    const q = escHtml(pm.question || '—');
+    const q = escHtml(pm.question || '-');
     const up = (pmHashStr(pm.slug + i) % 2) === 0;
     const cls = up ? 'nav-tick-up' : 'nav-tick-down';
     const arrow = up ? '▲' : '▼';
@@ -569,7 +573,7 @@ function updateNavTicker(markets) {
 }
 
 // ==========================================
-// DASHBOARD — Now with Polymarket Live Markets
+// DASHBOARD - Now with Polymarket Live Markets
 // ==========================================
 async function loadDashboard() {
   const container = document.getElementById('dash-content');
@@ -593,7 +597,7 @@ async function loadDashboard() {
         <div class="dash-markets-only">
           <div class="pm-eval-banner">
             <div class="pm-eval-banner-text">
-              <strong>No active evaluation.</strong> Browse markets below — start a challenge to place bets from PolyEdge.
+              <strong>No active evaluation.</strong> Browse markets below. Start a challenge to place bets from PolyEdge.
             </div>
             <button type="button" class="btn btn-primary" data-page="challenges">View challenges</button>
           </div>
@@ -717,7 +721,7 @@ async function loadLiveMarkets(query) {
     }
 
     if (!markets || markets.length === 0) {
-      grid.innerHTML = '<div class="market-loading">No markets loaded. Deploy the <code style="color:var(--accent)">gamma-proxy</code> Supabase function (see <code>supabase/functions/gamma-proxy</code>) or retry — public CORS proxies often rate-limit.</div>';
+      grid.innerHTML = '<div class="market-loading">No markets loaded. Deploy the <code style="color:var(--accent)">gamma-proxy</code> Supabase function (see <code>supabase/functions/gamma-proxy</code>) or retry. Public CORS proxies often rate-limit.</div>';
       const pills = document.getElementById('pm-cat-pills');
       if (pills) pills.innerHTML = '';
       updateNavTicker([]);
@@ -765,8 +769,8 @@ function profitCalc() {
   const winrate = wrEl ? (parseFloat(wrEl.value) || 50) / 100 : 0.5;
   const risk = rkEl ? rkEl.value : 'med';
   if (entry <= 0 || entry >= 1 || sz <= 0) {
-    yEl.textContent = '—';
-    pEl.textContent = '—';
+    yEl.textContent = '-';
+    pEl.textContent = '-';
     if (sumEl) sumEl.textContent = '';
     return;
   }
@@ -779,16 +783,16 @@ function profitCalc() {
     const ev = winrate * (payoutIfYes - sz) - (1 - winrate) * sz;
     const riskNote =
       risk === 'low'
-        ? 'You skew conservative — size down and favor liquid markets.'
+        ? 'You skew conservative. Size down and favor liquid markets.'
         : risk === 'high'
           ? 'Higher risk posture: keep position size small vs. bankroll and cap single-market exposure.'
           : 'Balanced risk: split size across uncorrelated events.';
     const edge =
       ev > sz * 0.08
-        ? '<strong>Positive expected value</strong> if your win rate holds — keep sizing disciplined.'
+        ? '<strong>Positive expected value</strong> if your win rate holds. Keep sizing disciplined.'
         : ev > 0
-          ? 'Edge looks thin — small edge, high variance.'
-          : '<strong>EV is negative</strong> at these inputs — you would need a higher hit rate or cheaper entry.';
+          ? 'Edge looks thin. Small edge, high variance.'
+          : '<strong>EV is negative</strong> at these inputs. You would need a higher hit rate or cheaper entry.';
     sumEl.innerHTML =
       `<p><strong>Expected value (rough):</strong> ${ev >= 0 ? '+' : ''}$${ev.toFixed(2)} per trial <span style="color:var(--text3)">(ignores fees/slippage)</span>.</p>` +
       `<p>${edge}</p>` +
@@ -812,7 +816,7 @@ function openMarketBet(marketName, side, price, retried) {
     return;
   }
   if (activeEval.status !== 'active' && activeEval.status !== 'funded') {
-    alert('This evaluation is not active — you cannot open new trades.');
+    alert('This evaluation is not active. You cannot open new trades.');
     return;
   }
   document.getElementById('mbet-market-name').value = marketName;
@@ -922,7 +926,7 @@ async function placeDashboardBet() {
 }
 
 function truncateStr(s, n) {
-  if (!s) return '—';
+  if (!s) return '-';
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
@@ -1033,7 +1037,7 @@ async function finalizeCheckoutSession(sessionId) {
 
   console.log('[PolyEdge] Inserting evaluation (no SELECT):', JSON.stringify(row));
 
-  // ONLY an INSERT — no .select(), no dedup check, nothing that triggers SELECT RLS
+  // ONLY an INSERT. No .select(), no dedup check, nothing that triggers SELECT RLS
   const { error } = await sb.from('evaluations').insert(row);
 
   if (error) {
@@ -1051,13 +1055,13 @@ function evalGradeLabel(e, closedTrades) {
   const profit = (Number(e.balance) || 0) - (Number(e.starting_balance) || 0);
   const target = (Number(e.starting_balance) || 0) * ((Number(e.profit_target_pct) || 10) / 100);
   const st = e.status || '';
-  if (st === 'passed' || st === 'funded') return { label: 'Challenge cleared', cls: 'pe-grade-elite', sub: 'Rules satisfied — outstanding.' };
+  if (st === 'passed' || st === 'funded') return { label: 'Challenge cleared', cls: 'pe-grade-elite', sub: 'Rules satisfied. Outstanding.' };
   if (st === 'failed' || st === 'expired') return { label: 'Evaluation closed', cls: 'pe-grade-end', sub: st.charAt(0).toUpperCase() + st.slice(1) };
   const pct = target > 0 ? (profit / target) * 100 : 0;
   if (pct >= 100) return { label: 'Target in sight', cls: 'pe-grade-great', sub: 'Lock in consistency & minimum trades.' };
   if (pct >= 55) return { label: 'On track', cls: 'pe-grade-good', sub: 'Stay within drawdown & size limits.' };
   if (profit > 0) return { label: 'Profitable', cls: 'pe-grade-ok', sub: 'Building toward the profit target.' };
-  if (profit === 0 || (profit > -1 && profit < 1)) return { label: 'Breakeven', cls: 'pe-grade-flat', sub: 'Capital preserved — look for edge.' };
+  if (profit === 0 || (profit > -1 && profit < 1)) return { label: 'Breakeven', cls: 'pe-grade-flat', sub: 'Capital preserved. Look for edge.' };
   return { label: 'Under pressure', cls: 'pe-grade-risk', sub: 'Prioritize drawdown control.' };
 }
 
@@ -1272,41 +1276,130 @@ async function loadLeaderboard() {
   const container = document.getElementById('lb-content');
   if (!container) return;
   if (!sb) {
-    container.innerHTML = renderEmptyLeaderboard();
+    container.innerHTML = renderLeaderboardUI([]);
     return;
   }
 
   const { data } = await sb.from('leaderboard').select('*');
-  if (!data || data.length === 0) {
-    container.innerHTML = renderEmptyLeaderboard();
-    return;
+  container.innerHTML = renderLeaderboardUI(data || []);
+}
+
+function getInitials(name) {
+  if (!name) return '??';
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+}
+
+function getAvatarColor(name) {
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 55%, 45%)`;
+}
+
+function renderLeaderboardUI(data) {
+  const medal = ['&#x1F947;', '&#x1F948;', '&#x1F949;']; // gold, silver, bronze
+  const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+
+  // Podium section (top 3)
+  let podiumHtml = '';
+  const top3 = data.slice(0, 3);
+  if (top3.length) {
+    const podiumOrder = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3; // 2nd, 1st, 3rd
+    const podiumHeights = top3.length >= 3 ? [180, 220, 150] : [220, 180];
+    const podiumRanks = top3.length >= 3 ? [1, 0, 2] : [0, 1];
+
+    podiumHtml = `<div class="lb-podium">${podiumOrder.map((r, pi) => {
+      const ri = podiumRanks[pi];
+      const initials = getInitials(r.trader);
+      const color = getAvatarColor(r.trader);
+      return `<div class="lb-podium-slot" style="--podium-h:${podiumHeights[pi]}px">
+        <div class="lb-podium-avatar" style="background:${color}">${initials}</div>
+        <div class="lb-podium-medal">${medal[ri]}</div>
+        <div class="lb-podium-name">${escHtml(r.trader || 'Trader')}</div>
+        <div class="lb-podium-return" style="color:var(--green)">+${r.return_pct}%</div>
+        <div class="lb-podium-bar" style="background:linear-gradient(180deg,${rankColors[ri]}22,${rankColors[ri]}08);border-top:2px solid ${rankColors[ri]}">
+          <span class="lb-podium-rank">#${ri + 1}</span>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
   }
 
-  container.innerHTML = `<div class="lb-shell"><div class="lb-shell-head"><h2 class="lb-title">Top performers</h2><p class="lb-sub">Funded &amp; passed traders by return</p></div><div class="lb-table-wrap"><table class="lb-table"><thead><tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Status</th></tr></thead><tbody>${data.map((r,i)=>{
-    const rankClass = i === 0 ? 'lb-rank-1' : i === 1 ? 'lb-rank-2' : i === 2 ? 'lb-rank-3' : '';
-    return `<tr><td class="lb-rank ${rankClass}">${i+1}</td><td>${r.trader}</td><td>$${r.account_size}</td><td>${r.eval_type}</td><td style="color:var(--green)">+${r.return_pct}%</td><td>${r.trades_count}</td><td><span class="badge badge-ok">${r.status}</span></td></tr>`;
-  }).join('')}</tbody></table></div></div>`;
+  // Stats summary
+  const totalTraders = data.length;
+  const avgReturn = data.length ? (data.reduce((s, r) => s + (r.return_pct || 0), 0) / data.length).toFixed(1) : '0.0';
+  const topReturn = data.length ? Math.max(...data.map(r => r.return_pct || 0)).toFixed(1) : '0.0';
+
+  let statsHtml = `<div class="lb-stats-row">
+    <div class="lb-stat-card">
+      <div class="lb-stat-val">${totalTraders}</div>
+      <div class="lb-stat-lbl">Funded Traders</div>
+    </div>
+    <div class="lb-stat-card">
+      <div class="lb-stat-val" style="color:var(--green)">+${avgReturn}%</div>
+      <div class="lb-stat-lbl">Avg Return</div>
+    </div>
+    <div class="lb-stat-card">
+      <div class="lb-stat-val" style="color:var(--accent)">+${topReturn}%</div>
+      <div class="lb-stat-lbl">Top Return</div>
+    </div>
+  </div>`;
+
+  // Full table
+  let tableHtml = '';
+  if (data.length) {
+    tableHtml = `<div class="lb-table-wrap"><table class="lb-table"><thead><tr>
+      <th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Status</th>
+    </tr></thead><tbody>${data.map((r, i) => {
+      const initials = getInitials(r.trader);
+      const color = getAvatarColor(r.trader);
+      const rankClass = i < 3 ? `lb-rank-${i + 1}` : '';
+      return `<tr>
+        <td class="lb-rank ${rankClass}">${i < 3 ? medal[i] : i + 1}</td>
+        <td><div class="lb-trader-cell"><span class="lb-mini-avatar" style="background:${color}">${initials}</span>${escHtml(r.trader || 'Trader')}</div></td>
+        <td>${FormatUtils ? FormatUtils.money(r.account_size, { decimals: 0 }) : '$' + r.account_size}</td>
+        <td>${r.eval_type}</td>
+        <td style="color:var(--green)">+${r.return_pct}%</td>
+        <td>${r.trades_count}</td>
+        <td><span class="badge badge-ok">${r.status}</span></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  } else {
+    // Empty state
+    tableHtml = `<div class="lb-empty-state">
+      <div class="lb-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div>
+      <h3>No funded traders yet</h3>
+      <p>Be the first to pass an evaluation and claim the top spot!</p>
+      <button class="btn btn-primary" data-page="challenges" style="margin-top:16px">Start a Challenge</button>
+    </div>`;
+  }
+
+  // Your ranking (if logged in)
+  let yourRank = '';
+  if (currentUser && data.length) {
+    const myEntry = data.find(r => r.user_id === currentUser.id);
+    if (myEntry) {
+      const idx = data.indexOf(myEntry);
+      const pctile = Math.round(((data.length - idx) / data.length) * 100);
+      yourRank = `<div class="lb-your-rank">
+        <h3>Your Ranking</h3>
+        <div class="lb-your-rank-grid">
+          <div class="lb-your-rank-pos"><span class="lb-your-rank-num">#${idx + 1}</span><span class="lb-your-rank-of">of ${data.length}</span></div>
+          <div class="lb-your-rank-bar"><div class="lb-your-rank-fill" style="width:${pctile}%"></div></div>
+          <div class="lb-your-rank-pctile">Top ${100 - pctile}%</div>
+        </div>
+      </div>`;
+    }
+  }
+
+  return `<div class="lb-shell">
+    <div class="lb-shell-head"><h2 class="lb-title">Top Performers</h2><p class="lb-sub">Funded and passed traders ranked by return</p></div>
+    ${podiumHtml}${statsHtml}${yourRank}${tableHtml}
+  </div>`;
 }
 
-function renderEmptyLeaderboard() {
-  return `
-    <div class="lb-shell lb-shell-empty">
-    <div class="lb-shell-head"><h2 class="lb-title">Leaderboard</h2><p class="lb-sub">Be the first funded trader on the board</p></div>
-    <div class="lb-table-wrap">
-    <table class="lb-table">
-      <thead>
-        <tr><th>Rank</th><th>Trader</th><th>Account</th><th>Type</th><th>Return</th><th>Trades</th><th>Win Rate</th><th>Status</th></tr>
-      </thead>
-      <tbody>
-        <tr class="lb-empty-row"><td colspan="8">No funded traders yet — be the first to pass an evaluation</td></tr>
-        <tr class="lb-empty-row"><td>1</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr class="lb-empty-row"><td>2</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr class="lb-empty-row"><td>3</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr class="lb-empty-row"><td>4</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-        <tr class="lb-empty-row"><td>5</td><td style="color:var(--text3)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-      </tbody>
-    </table></div></div>`;
-}
 
 // ==========================================
 // ACCOUNTS PAGE
@@ -1349,7 +1442,47 @@ function loadSettings() {
     status.textContent = '';
     status.className = 'settings-status';
   }
+
+  // Smooth scroll toggle
+  const smoothEl = document.getElementById('settings-smooth-scroll');
+  if (smoothEl) {
+    const smoothOff = localStorage.getItem('pe_smooth_scroll') === 'off';
+    smoothEl.checked = !smoothOff;
+  }
+
+  // Currency selector
+  const currencyEl = document.getElementById('settings-currency');
+  if (currencyEl && typeof FormatUtils !== 'undefined') {
+    const currencies = FormatUtils.getAllCurrencies();
+    const current = FormatUtils.getCurrency();
+    currencyEl.innerHTML = currencies.map(c =>
+      `<option value="${c.code}"${c.code === current ? ' selected' : ''}>${c.symbol} ${c.name} (${c.code})</option>`
+    ).join('');
+  }
 }
+
+function toggleSmoothScroll(enabled) {
+  if (enabled) {
+    document.documentElement.classList.remove('no-smooth');
+    localStorage.setItem('pe_smooth_scroll', 'on');
+  } else {
+    document.documentElement.classList.add('no-smooth');
+    localStorage.setItem('pe_smooth_scroll', 'off');
+  }
+}
+
+function changeCurrency(code) {
+  if (typeof FormatUtils !== 'undefined') {
+    FormatUtils.setCurrency(code);
+  }
+}
+
+// Restore smooth scroll preference on load
+(function() {
+  if (localStorage.getItem('pe_smooth_scroll') === 'off') {
+    document.documentElement.classList.add('no-smooth');
+  }
+})();
 
 async function saveSettings() {
   if (!sb || !currentUser) return;

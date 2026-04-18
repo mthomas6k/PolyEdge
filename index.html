@@ -591,7 +591,11 @@
       </div>
       <div class="settings-card" style="margin-top:24px">
         <h3 class="settings-subh">Preferences</h3>
-        <p class="settings-hint">More options will tie into email alerts and payouts as we ship them.</p>
+        <p class="settings-hint">Customize your experience.</p>
+        <label class="settings-toggle-row">
+          <input type="checkbox" id="settings-smooth-scroll" checked onchange="toggleSmoothScroll(this.checked)">
+          <span>Smooth scrolling</span>
+        </label>
         <label class="settings-toggle-row">
           <input type="checkbox" id="settings-notify-email" checked disabled>
           <span>Evaluation &amp; payout emails <small>(coming soon)</small></span>
@@ -600,6 +604,13 @@
           <input type="checkbox" id="settings-notify-marketing" disabled>
           <span>Product updates &amp; tips <small>(opt-in later)</small></span>
         </label>
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">Display Currency</label>
+          <select class="form-select" id="settings-currency" onchange="changeCurrency(this.value)">
+            <!-- Populated by JS -->
+          </select>
+          <p class="settings-hint" style="margin-top:6px">All values display in your chosen currency. Internal math is always in USD.</p>
+        </div>
       </div>
       <div class="settings-card" style="margin-top:24px">
         <h3 class="settings-subh">Data</h3>
