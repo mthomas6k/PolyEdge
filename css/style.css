@@ -1454,19 +1454,9 @@ footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:cent
 /* ==========================================
    GLOBE SECTION
    ========================================== */
-.globe-section{position:relative;padding:60px 0;overflow:hidden;text-align:center}
-.globe-wrap{position:relative;width:320px;height:320px;margin:0 auto 40px}
-.globe-canvas{width:100%;height:100%;border-radius:50%}
-.globe-ring{position:absolute;inset:-6px;border:1px solid rgba(56,136,232,0.15);border-radius:50%;animation:globeRingSpin 20s linear infinite}
-.globe-ring--2{inset:-18px;border-color:rgba(56,136,232,0.08);animation-duration:30s;animation-direction:reverse}
-@keyframes globeRingSpin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-.globe-cats{position:absolute;inset:0}
-.globe-cat{position:absolute;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#fff;white-space:nowrap}
-.globe-cat-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--accent)}
-.globe-cat-icon svg{width:20px;height:20px;stroke:#fff}
-.globe-cat--politics{top:18%;left:-40%}.globe-cat--events{top:18%;right:-46%}
-.globe-cat--crypto{top:46%;left:-32%}.globe-cat--economy{top:46%;right:-40%}
-.globe-cat--entertainment{top:72%;left:-46%}.globe-cat--sports{top:72%;right:-34%}
+.globe-section{position:relative;padding:60px 0;overflow:hidden;text-align:center;display:flex;flex-direction:column;align-items:center}
+.globe-wrap{position:relative;width:100%;max-width:640px;aspect-ratio:1/1;margin:0 auto 40px}
+.globe-canvas-3d, .globe-canvas-labels{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
 /* ==========================================

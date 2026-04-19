@@ -80,21 +80,18 @@
 
     <!-- GLOBE SECTION -->
     <div class="globe-section section">
-      <div class="globe-wrap">
-        <canvas class="globe-canvas" id="globe-canvas"></canvas>
-        <div class="globe-ring"></div>
-        <div class="globe-ring globe-ring--2"></div>
-        <div class="globe-cats">
-          <div class="globe-cat globe-cat--politics"><span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 20v-7.826a4 4 0 0 0-1.253-2.908l-7.373-7.051a2 2 0 0 0-2.748 0L3.253 9.266A4 4 0 0 0 2 12.174V20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2z"/><rect x="9" y="10" width="6" height="12"/></svg></span> Politics</div>
-          <div class="globe-cat globe-cat--events">Current Events <span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span></div>
-          <div class="globe-cat globe-cat--crypto"><span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Crypto</div>
-          <div class="globe-cat globe-cat--economy">Economy <span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span></div>
-          <div class="globe-cat globe-cat--entertainment"><span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Entertainment</div>
-          <div class="globe-cat globe-cat--sports">Sports <span class="globe-cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></span></div>
-        </div>
+      <div class="globe-wrap" id="globe-container">
+        <canvas class="globe-canvas-3d" id="c-globe"></canvas>
+        <canvas class="globe-canvas-labels" id="lc-globe" style="position:absolute;top:0;left:0;pointer-events:none;"></canvas>
       </div>
-      <div class="globe-typewriter-container" style="font-family: var(--sans); font-size: 20px; font-weight: 500; color: #fff; margin-top: 10px;">
-        Place trades on <span id="globe-typewriter-target" style="color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 700;"></span><span class="globe-cursor" style="color: var(--accent); animation: blink 1s step-end infinite;">|</span>
+      
+      <div class="globe-typewriter-container" style="margin-top: 20px;">
+        <div id="wrap" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;font-size:clamp(18px,3.5vw,40px);font-weight:600;letter-spacing:-0.01em;display:flex;align-items:center;flex-wrap:wrap;gap:0.25em;justify-content:center;padding:0 2rem;text-align:center;line-height:1.2;">
+          <span id="globe-static-txt" style="color:#ffffff;transition:opacity 0.3s;">Place trades on</span>
+          <span id="dynamic-wrap" style="display:inline-flex;align-items:center;gap:0;position:relative;">
+            <span id="globe-dynamic-txt" style="display:inline;background:linear-gradient(90deg,#1a6fd4 0%,#60b4ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;transition:none;"></span><span id="globe-cursor" style="display:inline-block;width:0.55em;height:1em;background:#ffffff;margin-left:3px;vertical-align:middle;border-radius:2px;box-shadow:0 0 3px 1px rgba(200,225,255,1), 0 0 8px 5px rgba(130,185,255,0.95), 0 0 18px 9px rgba(80,150,255,0.7), 0 0 40px 18px rgba(55,120,245,0.45), 0 0 80px 32px rgba(40,100,225,0.22), 0 0 140px 55px rgba(30,80,210,0.09);opacity:1;flex-shrink:0;"></span>
+          </span>
+        </div>
       </div>
     </div>
 
@@ -790,6 +787,9 @@
   <script src="js/homepageAnimations.js"></script>
   <script src="js/formatUtils.js?v=1"></script>
   <script src="js/odometer.js?v=1"></script>
+  <script src="js/typewriterEngine.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/globeEngine.js"></script>
   <script src="js/homepageEngine.js?v=1"></script>
   <script src="js/analytics.js?v=18"></script>
   <script src="js/app.js?v=26"></script>
@@ -801,6 +801,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Also init challenges marquee
   if (typeof PaymentMarquee !== 'undefined') {
     PaymentMarquee.init('pay-marquee-challenges');
+  }
+  if (typeof TypewriterEngine !== 'undefined') {
+    TypewriterEngine.init();
   }
 });
 </script>
