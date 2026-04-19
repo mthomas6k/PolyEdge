@@ -148,7 +148,6 @@ const TypewriterEngine = (() => {
     { text: "everyone thinks they have an edge.", sit: 5500 },
     { text: "patience is a position.", sit: 5000 },
     { text: "are you sure about that trade?", sit: 5000 },
-    { text: "does everyone know something you don't? they might.", sit: 7000 },
   ];
   
   // Jets easter egg - special sequence

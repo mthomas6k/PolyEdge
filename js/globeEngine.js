@@ -550,6 +550,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     labelData.forEach(ld => {
       if (ld.alpha < 0.01) return;
+      lx.font = 'bold 13px -apple-system,BlinkMacSystemFont,sans-serif';
+      const tw = lx.measureText(ld.label.name).width;
+      if (ld.ox + tw + 20 > W) {
+        ld.ox = ld.dotX - tw - 15;
+      }
+      if (ld.ox < 10) ld.ox = 10;
+      
       drawTypedLabel(lx, ld.ox, ld.oy, ld.label, ld.alpha, ts);
       const ddx = ld.ox - ld.dotX, ddy = ld.oy - ld.dotY;
       if (Math.hypot(ddx, ddy) > 22) {

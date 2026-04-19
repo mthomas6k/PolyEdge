@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>PolyEdge - Polymarket Prop Betting</title>
+  <title>PolyEdge - Polymarket Prop Trading</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -53,7 +53,7 @@
     <!-- Removed snowfall-canvas per user request -->
     <div class="hero">
       <div id="terminal-bg-container" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;pointer-events:none;"></div>
-      <div class="hero-tag">Prediction Market Prop Betting</div>
+      <div class="hero-tag">The first prop firm funding prediction markets</div>
       <h1 class="hero-headline">Prove Your <span>Edge</span>.<br>Get Funded.</h1>
       <p>Trade Polymarket with our capital. Pass the evaluation, prove consistency, and scale up to a funded account with real USDC.</p>
       <div class="hero-stats">
@@ -109,16 +109,16 @@
       <p class="estimator-lead">Sketch payouts and expected value. Tune win-rate and risk to see a plain-English trader profile, no wallet required.</p>
       <div class="estimator-grid">
         <div class="form-group">
-          <label class="form-label">Size ($ deployed)</label>
+          <label class="form-label">Size</label>
           <input class="form-input" id="pf-size" type="text" inputmode="decimal" value="100" oninput="profitCalc()">
         </div>
         <div class="form-group">
-          <label class="form-label">Avg entry (cents)</label>
+          <label class="form-label">Avg entry</label>
           <input class="form-input" id="pf-entry" type="text" inputmode="decimal" value="45" oninput="profitCalc()">
         </div>
         <div class="form-group">
-          <label class="form-label">Your win rate guess (%)</label>
-          <input class="form-input" id="pf-winrate" type="number" min="5" max="95" step="1" value="55" oninput="profitCalc()" title="How often you think you'd be right at this entry">
+          <label class="form-label">Your win rate guess</label>
+          <input class="form-input" id="pf-winrate" type="text" inputmode="decimal" value="55" oninput="profitCalc()" title="How often you think you'd be right at this entry">
         </div>
         <div class="form-group">
           <label class="form-label">Risk posture</label>
@@ -136,11 +136,11 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Gross payout if Yes ($)</label>
+          <label class="form-label">Gross payout on win</label>
           <div id="pf-out-yes" class="estimator-out">-</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Profit if Yes ($)</label>
+          <label class="form-label">Profit on win</label>
           <div id="pf-maxp" class="estimator-out">-</div>
         </div>
       </div>
@@ -155,12 +155,12 @@
         <div class="step">
           <div class="step-num">01</div>
           <h3>Choose a Challenge</h3>
-          <p>Pick your account size and evaluation type. One-Step for experienced bettors, Two-Step for a more gradual path.</p>
+          <p>Pick your account size and evaluation type. One-Step for experienced traders, Two-Step for a more gradual path.</p>
         </div>
         <div class="step">
           <div class="step-num">02</div>
           <h3>Prove Consistency</h3>
-          <p>Bet on prediction markets. Hit the profit target while staying within drawdown limits and the consistency rule.</p>
+          <p>Trade on prediction markets. Hit the profit target while staying within drawdown limits and the consistency rule.</p>
         </div>
         <div class="step">
           <div class="step-num">03</div>

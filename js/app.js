@@ -774,10 +774,24 @@ window.EstimatorFormatters = {
     if (!el.value) return;
     const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
     if (!isNaN(clean)) {
-      el.value = clean.toFixed(2) + '¢';
+      el.value = clean.toString() + '¢';
     }
   },
   unmaskCents: function(el) {
+    if (!el.value) return;
+    const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(clean)) {
+      el.value = clean.toString();
+    }
+  },
+  maskPercent: function(el) {
+    if (!el.value) return;
+    const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
+    if (!isNaN(clean)) {
+      el.value = clean.toString() + '%';
+    }
+  },
+  unmaskPercent: function(el) {
     if (!el.value) return;
     const clean = parseFloat(el.value.replace(/[^0-9.]/g, ''));
     if (!isNaN(clean)) {
@@ -789,17 +803,21 @@ window.EstimatorFormatters = {
 function initEstimatorFormatters() {
   const szEl = document.getElementById('pf-size');
   const enEl = document.getElementById('pf-entry');
+  const wrEl = document.getElementById('pf-winrate');
   if (szEl) {
     szEl.addEventListener('blur', () => window.EstimatorFormatters.maskSize(szEl));
     szEl.addEventListener('focus', () => window.EstimatorFormatters.unmaskSize(szEl));
-    // initial format
     window.EstimatorFormatters.maskSize(szEl);
   }
   if (enEl) {
     enEl.addEventListener('blur', () => window.EstimatorFormatters.maskCents(enEl));
     enEl.addEventListener('focus', () => window.EstimatorFormatters.unmaskCents(enEl));
-    // initial format
     window.EstimatorFormatters.maskCents(enEl);
+  }
+  if (wrEl) {
+    wrEl.addEventListener('blur', () => window.EstimatorFormatters.maskPercent(wrEl));
+    wrEl.addEventListener('focus', () => window.EstimatorFormatters.unmaskPercent(wrEl));
+    window.EstimatorFormatters.maskPercent(wrEl);
   }
 }
 
