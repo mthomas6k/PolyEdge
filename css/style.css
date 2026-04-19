@@ -1461,9 +1461,18 @@ footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:cent
 .globe-cat{position:absolute;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#fff;white-space:nowrap}
 .globe-cat-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--accent)}
 .globe-cat-icon svg{width:20px;height:20px;stroke:#fff}
-.globe-cat--politics{top:18%;left:-20%}.globe-cat--events{top:18%;right:-26%}
-.globe-cat--crypto{top:46%;left:-15%}.globe-cat--economy{top:46%;right:-20%}
-.globe-cat--entertainment{top:72%;left:-26%}.globe-cat--sports{top:72%;right:-14%}
+.globe-cat--politics{top:18%;left:-20%}.globe-cat--events{top:18%;right:-20%}
+.globe-cat--crypto{top:46%;left:-20%}.globe-cat--economy{top:46%;right:-20%}
+.globe-cat--entertainment{top:72%;left:-20%}.globe-cat--sports{top:72%;right:-20%}
+.globe-typewriter-container #wrap{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;font-size:clamp(18px,3.5vw,40px);font-weight:600;letter-spacing:-0.01em;display:flex;align-items:center;flex-wrap:wrap;gap:0.25em;justify-content:center;padding:0 2rem;text-align:center;line-height:1.2}
+#globe-static-txt{color:#ffffff;transition:opacity 0.3s}
+#dynamic-wrap{display:inline-flex;align-items:center;gap:0;position:relative}
+#globe-dynamic-txt{display:inline;background:linear-gradient(90deg,#1a6fd4 0%,#60b4ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;transition:none}
+#globe-dynamic-txt.cursor-off{background:none;-webkit-background-clip:unset;-webkit-text-fill-color:#1a6fd4;background-clip:unset;color:#1a6fd4}
+#globe-dynamic-txt.standalone{background:linear-gradient(90deg,#1a6fd4 0%,#60b4ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+#globe-dynamic-txt.standalone.cursor-off{background:none;-webkit-background-clip:unset;-webkit-text-fill-color:#1a6fd4;background-clip:unset}
+#globe-cursor{display:inline-block;width:0.55em;height:1em;background:#ffffff;margin-left:3px;vertical-align:middle;border-radius:2px;box-shadow:0 0 3px 1px rgba(200,225,255,1), 0 0 8px 5px rgba(130,185,255,0.95), 0 0 18px 9px rgba(80,150,255,0.7), 0 0 40px 18px rgba(55,120,245,0.45), 0 0 80px 32px rgba(40,100,225,0.22), 0 0 140px 55px rgba(30,80,210,0.09);opacity:1;flex-shrink:0;transition:opacity 0.1s}
+#globe-cursor.off{opacity:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
 /* ==========================================
