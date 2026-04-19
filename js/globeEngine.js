@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const CHAR_INTERVAL = 0.07;
   const ERASE_INTERVAL = 0.045;
-  const HOLD_DUR = () => 2.2 + Math.random() * 1.0;
+  const HOLD_DUR = () => 5.5 + Math.random() * 2.5; // Changed from 2.2 to 5.5 seconds base
   const CURSOR_BLINK = 530;
 
   function makeLabelState(name) {
