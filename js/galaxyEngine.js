@@ -27,6 +27,8 @@ let renderer, scene, camera;
 let starMesh, nebulaGroup = [];
 let scrollProgress = 0, targetScrollProgress = 0;
 let lastTime = 0;
+let isRendering = false;
+let animId = null;
 
 // Temporal history for nebula rendering (High-end only)
 let nebulaRT, historyRT, clock = new THREE.Clock();
@@ -59,11 +61,40 @@ function init() {
   window.addEventListener('resize', onResize);
   window.addEventListener('scroll', updateScroll, { passive: true });
   
-  // Initial check
-  updateScroll();
-  
-  // Start loop
+  // Initial check: if we are already on home, start
+  const homePage = document.getElementById('page-home');
+  if (homePage && homePage.classList.contains('active')) {
+    setPage('home');
+  }
+}
+
+/**
+ * Public control for the engine from external page logic
+ */
+function setPage(id) {
+  if (id === 'home') {
+    start();
+  } else {
+    stop();
+  }
+}
+
+function start() {
+  if (isRendering) return;
+  console.log("[GalaxyEngine] Starting...");
+  isRendering = true;
+  updateScroll(); // Sync initially
   requestAnimationFrame(animate);
+}
+
+function stop() {
+  if (!isRendering) return;
+  console.log("[GalaxyEngine] Stopping...");
+  isRendering = false;
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  const canvas = document.getElementById('galaxy-canvas');
+  if (canvas) canvas.classList.remove('visible');
 }
 
 function initStars() {
@@ -199,6 +230,7 @@ function initNebulas() {
 }
 
 function updateScroll() {
+  if (!isRendering) return;
   const hero = document.querySelector('.hero');
   const heroHeight = hero ? hero.offsetHeight : window.innerHeight;
   const scrollY = window.scrollY;
@@ -238,7 +270,9 @@ function cameraPathAt(t) {
 }
 
 function animate(time) {
-  requestAnimationFrame(animate);
+  if (!isRendering) return;
+  animId = requestAnimationFrame(animate);
+  
   const dt = (time - lastTime) / 1000;
   lastTime = time;
 
@@ -275,8 +309,8 @@ function animate(time) {
   renderer.render(scene, camera);
 }
 
-// Global hook for manual init if needed
-window.initGalaxy = init;
+// Global hook for manual init/control
+window.GalaxyEngine = { init, setPage };
 
 // Auto-init on DOM load
 if (document.readyState === 'loading') {

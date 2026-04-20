@@ -2545,6 +2545,11 @@ function showPage(id) {
       }, 160);
     }
   }
+
+  // Galaxy background lifecycle
+  if (window.GalaxyEngine && window.GalaxyEngine.setPage) {
+    window.GalaxyEngine.setPage(id);
+  }
 }
 
 function bindDataPage() {
