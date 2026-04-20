@@ -97,6 +97,22 @@ function stop() {
   if (canvas) canvas.classList.remove('visible');
 }
 
+function createCircleTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+  gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(canvas);
+  return tex;
+}
+
 function initStars() {
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(STAR_COUNT * 3);
@@ -117,7 +133,7 @@ function initStars() {
     color[i * 3 + 1] = c.g;
     color[i * 3 + 2] = c.b;
     
-    sizes[i] = Math.random() * 2 + 0.5;
+    sizes[i] = Math.random() * 2.5 + 0.5;
   }
 
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -125,11 +141,14 @@ function initStars() {
   geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
   const mat = new THREE.PointsMaterial({
-    size: 2,
+    size: 4,
     vertexColors: true,
     transparent: true,
-    opacity: 0.8,
-    sizeAttenuation: true
+    opacity: 0.9,
+    sizeAttenuation: true,
+    map: createCircleTexture(),
+    alphaTest: 0.01,
+    blending: THREE.AdditiveBlending
   });
 
   starMesh = new THREE.Points(geo, mat);

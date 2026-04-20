@@ -349,7 +349,7 @@ body.has-nav-ticker .page{padding-top:88px}
 .settings-toggle-row input{width:18px;height:18px;accent-color:var(--accent)}
 
 /* ========== HOMEPAGE / HERO ========== */
-.hero{padding:100px 32px 80px;text-align:center;position:relative;overflow:hidden}
+.hero{padding:100px 32px 80px;text-align:center;position:relative;overflow:hidden;background:#04060a;z-index:3}
 .hero::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,var(--accentglow) 0%,transparent 60%);pointer-events:none;animation:floatOrb 8s ease-in-out infinite}
 .hero::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(56,136,232,0.06) 0%,transparent 40%,rgba(80,160,255,0.04) 70%,transparent 100%);background-size:400% 400%;animation:heroGradient 12s ease infinite;pointer-events:none}
 .hero-tag{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:24px;animation:fadeUp 0.5s ease both;animation-delay:0.1s;position:relative;z-index:1}
