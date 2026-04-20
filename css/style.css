@@ -12,6 +12,21 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
   text-align:left;
   font-family:'JetBrains Mono','Menlo',monospace;
 }
+
+#galaxy-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+}
+#galaxy-canvas.visible {
+  opacity: 1;
+}
 #terminal-bg-container *{
   font-family:inherit!important;
 }
