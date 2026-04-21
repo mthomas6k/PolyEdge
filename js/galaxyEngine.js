@@ -745,17 +745,30 @@ function init() {
   // ============================================================
   // PARALLAX DRIFT
   // ============================================================
+  // FIX 9: Kill nebulas once they've drifted fully past the camera.
+  // Removed the expensive "reposition behind finale" lerp entirely — those
+  // nebulas are off-screen and just burning shader cycles for nothing.
+  // Fade intensity over pastNebula 600→1000 window, then mesh.visible = false.
   function updateNebulaDrift() {
-    const finaleZ = finale.originalPos.z;
-    const finaleX = finale.originalPos.x;
-    const finaleY = finale.originalPos.y;
-
     for (const neb of allNebulas) {
       if (neb.skipDrift) continue;
 
       const origZ = neb.originalPos.z;
       const camZ = camera.position.z;
       const zDist = Math.abs(camZ - origZ);
+      const pastNebula = origZ - camZ; // positive when camera is past
+
+      // Once fully past, fade out and kill
+      let visibilityFade = 1.0;
+      if (pastNebula > 600) {
+        visibilityFade = 1.0 - Math.min(1, (pastNebula - 600) / 400);
+      }
+
+      // If dead, skip all position/scale/uniform work entirely
+      if (visibilityFade <= 0.001) {
+        neb.mesh.visible = false;
+        continue;
+      }
 
       const DRIFT_RADIUS = 600;
       let approach = 1 - Math.min(1, zDist / DRIFT_RADIUS);
@@ -774,43 +787,30 @@ function init() {
       neb.material.uniforms.uNebulaRadius.value = neb.originalRadius * scale;
       neb.mesh.scale.setScalar(scale);
 
-      const pastNebula = origZ - camZ;
-      let backdropLerp = 0;
-      if (pastNebula > 400) {
-        backdropLerp = Math.min(1, (pastNebula - 400) / 600);
-        backdropLerp = backdropLerp * backdropLerp * (3 - 2 * backdropLerp);
-      }
-
-      if (backdropLerp > 0) {
-        const backdropTarget = new THREE.Vector3(
-          finaleX + neb.driftDir.x * 400,
-          finaleY + neb.driftDir.y * 200,
-          finaleZ - 300
-        );
-        neb.mesh.position.lerp(backdropTarget, backdropLerp);
-      }
-      neb.material.uniforms.uNebulaCenter.value.copy(neb.mesh.position);
-    }
-  }
-
-  function updateNebulaCulling() {
-    const FADE_START = 1100;
-    const FADE_END = 1800;
-    for (const neb of allNebulas) {
-      const dist = camera.position.distanceTo(neb.mesh.position);
-      const nebRadius = neb.material.uniforms.uNebulaRadius.value;
-      const effectiveDist = dist - nebRadius;
-      let fade = 1.0;
-      if (effectiveDist > FADE_START) {
-        fade = 1.0 - (effectiveDist - FADE_START) / (FADE_END - FADE_START);
-        fade = Math.max(0, Math.min(1, fade));
-      }
+      // Apply visibility fade to intensity
       if (neb._baseIntensity === undefined) {
         neb._baseIntensity = neb.material.uniforms.uIntensity.value;
       }
-      neb.material.uniforms.uIntensity.value = neb._baseIntensity * fade;
-      neb.mesh.visible = fade > 0.001;
+      neb.material.uniforms.uIntensity.value = neb._baseIntensity * visibilityFade;
+      neb.mesh.visible = true;
+
+      neb.material.uniforms.uNebulaCenter.value.copy(neb.mesh.position);
     }
+
+    // Also handle distance-culling for the finale (which skips drift)
+    if (finale._baseIntensity === undefined) {
+      finale._baseIntensity = finale.material.uniforms.uIntensity.value;
+    }
+    const dist = camera.position.distanceTo(finale.mesh.position);
+    const nebRadius = finale.material.uniforms.uNebulaRadius.value;
+    const effectiveDist = dist - nebRadius;
+    let fade = 1.0;
+    if (effectiveDist > 1100) {
+      fade = 1.0 - (effectiveDist - 1100) / 700;
+      fade = Math.max(0, Math.min(1, fade));
+    }
+    finale.material.uniforms.uIntensity.value = finale._baseIntensity * fade;
+    finale.mesh.visible = fade > 0.001;
   }
 
   // ============================================================
@@ -844,7 +844,14 @@ function init() {
     camera.up.set(Math.sin(path.roll), Math.cos(path.roll), 0);
     camera.lookAt(path.lookAt);
 
+    // Update drift/visibility FIRST so we know which nebulas are alive
+    updateNebulaDrift();
+
+    // FIX 10: Only update uniforms for VISIBLE nebulas
+    let anyNebulaVisible = false;
     for (const neb of allNebulas) {
+      if (!neb.mesh.visible) continue;
+      anyNebulaVisible = true;
       neb.material.uniforms.uCameraPos.value.copy(camera.position);
       neb.material.uniforms.uTime.value = elapsed;
     }
@@ -858,30 +865,31 @@ function init() {
       scene.fog.far = newFogFar;
     }
 
-    updateNebulaDrift();
-    updateNebulaCulling();
-
     // PASS 1: Main scene (stars, dust) to canvas
     renderer.setRenderTarget(null);
     renderer.render(scene, camera);
 
-    // PASS 2: Nebulas to low-res target
-    renderer.setRenderTarget(nebulaRenderTarget);
-    renderer.setClearColor(0x000000, 0);
-    renderer.clear();
-    renderer.render(nebulaScene, camera);
+    // FIX 11: Skip ALL nebula passes when no nebulas are visible.
+    // This saves 3 full render passes during phases where everything is killed.
+    if (anyNebulaVisible) {
+      // PASS 2: Nebulas to low-res target
+      renderer.setRenderTarget(nebulaRenderTarget);
+      renderer.setClearColor(0x000000, 0);
+      renderer.clear();
+      renderer.render(nebulaScene, camera);
 
-    // PASS 3: Blend with history + additive composite onto canvas
-    renderer.setRenderTarget(null);
-    renderer.setClearColor(0x000106, 1);
-    renderer.autoClear = false;
-    renderer.render(compositeScene, compositeCamera);
-    renderer.autoClear = true;
+      // PASS 3: Blend with history + additive composite onto canvas
+      renderer.setRenderTarget(null);
+      renderer.setClearColor(0x000106, 1);
+      renderer.autoClear = false;
+      renderer.render(compositeScene, compositeCamera);
+      renderer.autoClear = true;
 
-    // PASS 4: Copy blended result to history for next frame
-    renderer.setRenderTarget(nebulaHistoryTarget);
-    renderer.clear();
-    renderer.render(copyScene, compositeCamera);
+      // PASS 4: Copy blended result to history for next frame
+      renderer.setRenderTarget(nebulaHistoryTarget);
+      renderer.clear();
+      renderer.render(copyScene, compositeCamera);
+    }
 
     frames++;
     if (now - lastFpsTime > 500) {
