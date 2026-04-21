@@ -286,14 +286,57 @@ body.has-nav-ticker .page{padding-top:88px}
 .rules-glance-card p{font-size:13px;color:var(--text2);line-height:1.5}
 
 /* ── Payment Methods Marquee ── */
-.pm-wrapper{background:#000;padding:48px 0;width:100%;overflow:hidden}
-.pm-marquee{position:relative;width:100%;overflow:hidden;-webkit-mask-image:linear-gradient(to right,transparent 0%,#000 10%,#000 90%,transparent 100%);mask-image:linear-gradient(to right,transparent 0%,#000 10%,#000 90%,transparent 100%)}
-.pm-track{display:flex;width:max-content;animation:pm-scroll 25s linear infinite;will-change:transform;transform:translateZ(0);backface-visibility:hidden}
-.pm-item{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:0 36px;height:56px}
-.pm-logo{display:block;width:auto;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
-@keyframes pm-scroll{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
-@media(prefers-reduced-motion:reduce){.pm-track{animation:none}}
-@media(max-width:640px){.pm-wrapper{padding:32px 0}.pm-item{padding:0 24px;height:44px}.pm-logo{transform:scale(0.82);transform-origin:center}.pm-track{animation-duration:18s}}
+.pm-wrapper {
+  background: #000;
+  padding: 48px 0;
+  width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+.pm-marquee {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 10%, #000 90%, transparent 100%);
+}
+.pm-track {
+  display: flex;
+  width: max-content;
+  animation: pm-scroll 25s linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+.pm-item {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 36px;
+  height: 56px;
+}
+.pm-logo {
+  display: block;
+  width: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+@keyframes pm-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pm-track { animation: none; }
+}
+@media (max-width: 640px) {
+  .pm-wrapper { padding: 32px 0; }
+  .pm-item { padding: 0 24px; height: 44px; }
+  .pm-logo { transform: scale(0.82); transform-origin: center; }
+  .pm-track { animation-duration: 18s; }
+}
 
 .login-page-bg{position:relative;min-height:calc(100vh - 56px);display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 80px}
 .login-page-bg .auth-box{position:relative;z-index:2;margin-top:48px;border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,0.45);max-width:min(520px,96vw)!important;width:100%}

@@ -51,8 +51,12 @@ const PaymentMarquee = (() => {
   function init(trackId) {
     const track = document.getElementById(trackId);
     if (!track) return;
-    // 2 copies for the CSS translate3d(-50%) seamless loop
-    track.innerHTML = buildSet() + buildSet();
+    // Use the static HTML already in the DOM (base64 logos)
+    // Duplicate it once for the seamless CSS translate3d(-50%) loop
+    const staticContent = track.innerHTML;
+    if (staticContent.trim()) {
+      track.innerHTML = staticContent + staticContent;
+    }
   }
 
   return { init };
@@ -346,10 +350,9 @@ const HeroCycle = (() => {
   return { init };
 })();
 
-// ---- INIT ALL ----
+// ---- INIT ALL (Note: Marquee handled in app.js for full lifecycle) ----
 document.addEventListener('DOMContentLoaded', () => {
   Snowfall.init();
-  PaymentMarquee.init('pay-marquee-home');
   FaqEngine.render('faq-hub-home');
   HeroCycle.init();
 
