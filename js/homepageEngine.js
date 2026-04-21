@@ -50,7 +50,11 @@ const PaymentMarquee = (() => {
 
   function init(trackId) {
     const track = document.getElementById(trackId);
-    if (!track) return;
+    if (!track || track.dataset.pmInit === 'true') return;
+    
+    // Mark as initialized to prevent double-calls
+    track.dataset.pmInit = 'true';
+    
     // Use the static HTML already in the DOM (base64 logos)
     // Duplicate it once for the seamless CSS translate3d(-50%) loop
     const staticContent = track.innerHTML;

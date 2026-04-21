@@ -266,8 +266,8 @@ nav{position:fixed;top:0;left:0;right:0;min-height:56px;background:rgba(4,6,10,0
 
 #matrix-rain-canvas{position:fixed;inset:0;z-index:1;pointer-events:none;max-height:100vh;max-height:100dvh}
 
-/* Translucent shell so blue matrix shows on non-home; cards stay opaque */
-.page{display:none;padding-top:56px;min-height:0;position:relative;z-index:2;background:rgba(4,6,10,0.6);padding-bottom:0}
+/* Translucent shell so blue matrix shows through on non-home pages; content stays readable */
+.page{display:none;padding-top:56px;min-height:0;position:relative;z-index:2;background:rgba(4,6,10,0.82);padding-bottom:0}
 .page.active{display:flex;flex-direction:column;animation:fadeIn 0.28s ease;flex:1 1 auto;min-width:0;min-height:100vh;min-height:100dvh}
 .page.active #bottom-nav{margin-top:auto;flex-shrink:0;width:100%}
 body.has-nav-ticker .page{padding-top:88px}
@@ -293,6 +293,8 @@ body.has-nav-ticker .page{padding-top:88px}
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
+/* On the homepage, make the wrapper transparent so the galaxy shows through */
+#page-home .pm-wrapper{background:transparent}
 .pm-marquee {
   position: relative;
   width: 100%;
@@ -392,7 +394,7 @@ body.has-nav-ticker .page{padding-top:88px}
 .settings-toggle-row input{width:18px;height:18px;accent-color:var(--accent)}
 
 /* ========== HOMEPAGE / HERO ========== */
-.hero{padding:100px 32px 80px;text-align:center;position:relative;overflow:hidden;background:#04060a;z-index:3}
+.hero{padding:100px 32px 80px;text-align:center;position:relative;overflow:hidden;background:transparent;z-index:3}
 .hero::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,var(--accentglow) 0%,transparent 60%);pointer-events:none;animation:floatOrb 8s ease-in-out infinite}
 .hero::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,rgba(56,136,232,0.06) 0%,transparent 40%,rgba(80,160,255,0.04) 70%,transparent 100%);background-size:400% 400%;animation:heroGradient 12s ease infinite;pointer-events:none}
 .hero-tag{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:24px;animation:fadeUp 0.5s ease both;animation-delay:0.1s;position:relative;z-index:1}
