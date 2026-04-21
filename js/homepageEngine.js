@@ -21,43 +21,39 @@ const Snowfall = (() => {
 
 
 
-// ---- PAYMENT MARQUEE BUILDER ----
+// ---- PAYMENT MARQUEE BUILDER (new pm-scroll design) ----
 const PaymentMarquee = (() => {
   const PROVIDERS = [
-    { name: 'Visa', icon: 'visa', color: '1434CB' },
-    { name: 'Mastercard', icon: 'mastercard', color: 'EB001B' },
-    { name: 'Apple Pay', icon: 'applepay', color: 'FFFFFF' },
-    { name: 'Google Pay', icon: 'googlepay', color: '4285F4' },
-    { name: 'PayPal', icon: 'paypal', color: '003087' },
-    { name: 'Amex', icon: 'americanexpress', color: '006FCF' },
-    { name: 'Discover', icon: 'discover', color: 'FF6000' },
-    { name: 'Affirm', icon: 'affirm', color: '0FA0EA' },
-    { name: 'Afterpay', icon: 'afterpay', color: 'B2FCE4' },
-    { name: 'Klarna', icon: 'klarna', color: 'FFB3C7' },
-    { name: 'Cash App', icon: 'cashapp', color: '00D632' },
-    { name: 'Link', icon: 'stripe', color: '008CDD' },
-    { name: 'JCB', icon: 'jcb', color: '0B7CB0' },
-    { name: 'Bitcoin', icon: 'bitcoin', color: 'F7931A' },
-    { name: 'Ethereum', icon: 'ethereum', color: '3C3C3D' },
-    { name: 'USDC', custom: true },
+    { name: 'Visa', icon: 'visa', color: '1434CB', h: 26 },
+    { name: 'Mastercard', icon: 'mastercard', color: 'EB001B', h: 38 },
+    { name: 'Apple Pay', icon: 'applepay', color: 'FFFFFF', h: 28 },
+    { name: 'Google Pay', icon: 'googlepay', color: '4285F4', h: 28 },
+    { name: 'PayPal', icon: 'paypal', color: '003087', h: 30 },
+    { name: 'Amex', icon: 'americanexpress', color: '006FCF', h: 28 },
+    { name: 'Discover', icon: 'discover', color: 'FF6000', h: 28 },
+    { name: 'Affirm', icon: 'affirm', color: '0FA0EA', h: 26 },
+    { name: 'Afterpay', icon: 'afterpay', color: 'B2FCE4', h: 24 },
+    { name: 'Klarna', icon: 'klarna', color: 'FFB3C7', h: 26 },
+    { name: 'Cash App', icon: 'cashapp', color: '00D632', h: 28 },
+    { name: 'Link', icon: 'stripe', color: '008CDD', h: 26 },
+    { name: 'JCB', icon: 'jcb', color: '0B7CB0', h: 30 },
+    { name: 'Bitcoin', icon: 'bitcoin', color: 'F7931A', h: 28 },
+    { name: 'Ethereum', icon: 'ethereum', color: '3C3C3D', h: 28 },
   ];
 
-  function buildChip(p) {
-    if (p.custom) {
-      return `<span class="pay-chip pay-chip--labeled" title="${p.name}"><span class="pay-chip-badge pay-chip-badge--usdc pay-chip-badge--lrg" aria-hidden="true">$</span><span class="pay-chip-name">USDC</span></span>`;
-    }
-    return `<span class="pay-chip pay-chip--labeled" title="${p.name}"><img class="pay-chip-img" src="https://cdn.simpleicons.org/${p.icon}/${p.color}" alt="${p.name}" width="28" height="28" loading="lazy" decoding="async"><span class="pay-chip-name">${p.name}</span></span>`;
+  function buildItem(p) {
+    return `<div class="pm-item"><img src="https://cdn.simpleicons.org/${p.icon}/${p.color}" alt="${p.name}" class="pm-logo" style="height:${p.h}px;" loading="lazy" decoding="async"></div>`;
   }
 
   function buildSet() {
-    return `<div class="payment-marquee-set">${PROVIDERS.map(buildChip).join('')}</div>`;
+    return PROVIDERS.map(buildItem).join('');
   }
 
   function init(trackId) {
     const track = document.getElementById(trackId);
     if (!track) return;
-    // 3 copies for seamless infinite loop
-    track.innerHTML = buildSet() + buildSet() + buildSet();
+    // 2 copies for the CSS translate3d(-50%) seamless loop
+    track.innerHTML = buildSet() + buildSet();
   }
 
   return { init };
