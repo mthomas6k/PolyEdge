@@ -22,6 +22,11 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
   pointer-events: none;
   opacity: 1;
   background: transparent;
+  transition: opacity 0.35s ease;
+}
+body:not(.on-home) #galaxy-canvas {
+  opacity: 0;
+  pointer-events: none;
 }
 #terminal-bg-container *{
   font-family:inherit!important;
@@ -258,7 +263,7 @@ nav{position:fixed;top:0;left:0;right:0;min-height:56px;background:rgba(4,6,10,0
 #matrix-rain-canvas{position:fixed;inset:0;z-index:1;pointer-events:none;max-height:100vh;max-height:100dvh}
 
 /* Translucent shell so blue matrix shows on non-home; cards stay opaque */
-.page{display:none;padding-top:56px;min-height:0;position:relative;z-index:2;background:rgba(4,6,10,0.78);padding-bottom:0}
+.page{display:none;padding-top:56px;min-height:0;position:relative;z-index:2;background:var(--bg);padding-bottom:0}
 .page.active{display:flex;flex-direction:column;animation:fadeIn 0.28s ease;flex:1 1 auto;min-width:0;min-height:100vh;min-height:100dvh}
 .page.active #bottom-nav{margin-top:auto;flex-shrink:0;width:100%}
 body.has-nav-ticker .page{padding-top:88px}
@@ -391,7 +396,7 @@ footer{border-top:1px solid var(--border);padding:32px 24px 36px;text-align:cent
 .challenge-toggle button.active{background:linear-gradient(135deg,#5aa6ff 0%,var(--accent) 50%,var(--accent2) 100%);color:#fff;border-color:transparent;box-shadow:0 4px 18px rgba(56,136,232,0.28)}
 .challenge-toggle button:first-child{border-right:none}
 .challenge-set{display:none}
-.challenge-set.active{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1280px;margin:0 auto}
+.challenge-set.active{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;max-width:1440px;margin:0 auto;padding:0 24px}
 .challenge-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;overflow:hidden;position:relative;transition:all 0.25s}
 .challenge-card:hover{transform:translateY(-4px);box-shadow:0 8px 32px rgba(0,0,0,0.4)}
 .challenge-card.feat{border-color:var(--accent)}

@@ -2546,7 +2546,12 @@ function showPage(id) {
     }
   }
 
-  // Galaxy background lifecycle
+  // Galaxy background lifecycle – toggle body class so CSS hides canvas on non-home pages
+  if (id === 'home') {
+    document.body.classList.add('on-home');
+  } else {
+    document.body.classList.remove('on-home');
+  }
   if (window.GalaxyEngine && window.GalaxyEngine.setPage) {
     window.GalaxyEngine.setPage(id);
   }
@@ -2628,6 +2633,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   const initialPage = document.querySelector('.page.active');
   const initialId = initialPage?.id?.replace(/^page-/, '') || 'home';
+  if (initialId === 'home') document.body.classList.add('on-home');
+  else document.body.classList.remove('on-home');
   updateShellBackground(initialId);
 
   // Mobile nav toggle
