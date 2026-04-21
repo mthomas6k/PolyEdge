@@ -10,19 +10,21 @@ let animId = null;
 
 // Public control functions
 function start() {
-  if (isRendering) return;
+  if (isRendering && animId) return;
   console.log("[GalaxyEngine] Starting...");
   isRendering = true;
   if (window._galaxyUpdateScroll) window._galaxyUpdateScroll();
-  if (window._galaxyRender) window._galaxyRender();
+  if (window._galaxyRender && !animId) window._galaxyRender();
 }
 
 function stop() {
   if (!isRendering) return;
   console.log("[GalaxyEngine] Stopping...");
   isRendering = false;
-  if (animId) cancelAnimationFrame(animId);
-  animId = null;
+  if (animId) {
+    cancelAnimationFrame(animId);
+    animId = null;
+  }
 }
 
 function setPage(id) {
@@ -511,6 +513,7 @@ function init() {
   nebulaScene.add(nebC.mesh);
 
   // FINALE
+  const FINALE_POS = new THREE.Vector3(550, 40, -1000);
   const finale = buildVolumetricNebula({
     position: FINALE_POS,
     radius: 380,
