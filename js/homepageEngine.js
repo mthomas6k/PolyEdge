@@ -24,21 +24,20 @@ const Snowfall = (() => {
 // ---- PAYMENT MARQUEE BUILDER (new pm-scroll design) ----
 const PaymentMarquee = (() => {
   const PROVIDERS = [
-    { name: 'Visa', icon: 'visa', color: '1434CB', h: 26 },
-    { name: 'Mastercard', icon: 'mastercard', color: 'EB001B', h: 38 },
-    { name: 'Apple Pay', icon: 'applepay', color: 'FFFFFF', h: 28 },
-    { name: 'Google Pay', icon: 'googlepay', color: '4285F4', h: 28 },
-    { name: 'PayPal', icon: 'paypal', color: '003087', h: 30 },
-    { name: 'Amex', icon: 'americanexpress', color: '006FCF', h: 28 },
-    { name: 'Discover', icon: 'discover', color: 'FF6000', h: 28 },
-    { name: 'Affirm', icon: 'affirm', color: '0FA0EA', h: 26 },
-    { name: 'Afterpay', icon: 'afterpay', color: 'B2FCE4', h: 24 },
-    { name: 'Klarna', icon: 'klarna', color: 'FFB3C7', h: 26 },
-    { name: 'Cash App', icon: 'cashapp', color: '00D632', h: 28 },
-    { name: 'Link', icon: 'stripe', color: '008CDD', h: 26 },
-    { name: 'JCB', icon: 'jcb', color: '0B7CB0', h: 30 },
-    { name: 'Bitcoin', icon: 'bitcoin', color: 'F7931A', h: 28 },
-    { name: 'Ethereum', icon: 'ethereum', color: '3C3C3D', h: 28 },
+    { name: 'Visa', icon: 'visa', color: '1434CB', h: 32 },
+    { name: 'Mastercard', icon: 'mastercard', color: 'EB001B', h: 42 },
+    { name: 'Apple Pay', icon: 'applepay', color: 'FFFFFF', h: 36 },
+    { name: 'Google Pay', icon: 'googlepay', color: '4285F4', h: 34 },
+    { name: 'PayPal', icon: 'paypal', color: '003087', h: 34 },
+    { name: 'Amex', icon: 'americanexpress', color: '006FCF', h: 32 },
+    { name: 'Discover', icon: 'discover', color: 'FF6000', h: 32 },
+    { name: 'Stripe', icon: 'stripe', color: '008CDD', h: 34 },
+    { name: 'Afterpay', icon: 'afterpay', color: 'B2FCE4', h: 30 },
+    { name: 'Klarna', icon: 'klarna', color: 'FFB3C7', h: 32 },
+    { name: 'Cash App', icon: 'cashapp', color: '00D632', h: 34 },
+    { name: 'JCB', icon: 'jcb', color: '0B7CB0', h: 34 },
+    { name: 'Bitcoin', icon: 'bitcoin', color: 'F7931A', h: 36 },
+    { name: 'Ethereum', icon: 'ethereum', color: '3C3C3D', h: 36 },
   ];
 
   function buildItem(p) {

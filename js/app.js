@@ -2633,8 +2633,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   const initialPage = document.querySelector('.page.active');
   const initialId = initialPage?.id?.replace(/^page-/, '') || 'home';
-  if (initialId === 'home') document.body.classList.add('on-home');
-  else document.body.classList.remove('on-home');
+  if (initialId === 'home') {
+    document.body.classList.add('on-home');
+    if (window.MatrixRain) window.MatrixRain.disable();
+  } else {
+    document.body.classList.remove('on-home');
+    if (window.MatrixRain) window.MatrixRain.enable();
+  }
+  
+  if (typeof PaymentMarquee !== 'undefined') {
+    PaymentMarquee.init('pay-marquee-home');
+    PaymentMarquee.init('pay-marquee-challenges');
+  }
   updateShellBackground(initialId);
 
   // Mobile nav toggle
