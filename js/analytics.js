@@ -181,7 +181,12 @@ const PM = (() => {
     const totalCashPnlFieldOnly = pos.reduce((s, p) => s + n(p, 'cashPnl', 'cash_pnl'), 0);
     const totalInitialValue = pos.reduce((s, p) => s + n(p, 'initialValue', 'initial_value'), 0);
 
-    const livePositionConditionIds = new Set(pos.map(p => p.conditionId).filter(Boolean));
+    const liveIds = new Set();
+    pos.forEach(p => {
+      if (p.conditionId) liveIds.add(p.conditionId);
+      if (p.asset) liveIds.add(p.asset);
+      if (p.title) liveIds.add(p.title);
+    });
 
     const resolvedPositions = pos.filter(p => {
       const price = n(p, 'curPrice', 'cur_price');
@@ -233,18 +238,29 @@ const PM = (() => {
       pnlByCondition[cid].net += n(p, 'currentValue', 'current_value');
     });
 
-    // Calculate accurate Total P&L and Win Rate using dropping logic
+    // Step 2: positionsPnl = sum of realizedPnl + cashPnl over only the rows in the positions array.
     const positionsPnl = pos.reduce((s, p) => s + positionTotalPnlRow(p), 0);
-    let redeemedOnlyPnl = 0;
+    
+    // Step 3: redeemedPnl = sum of activity-reconstructed net only for conditionIds that are NOT in liveIds.
+    let redeemedPnl = 0;
     let droppedWinsCount = 0;
 
     for (const [cid, row] of Object.entries(pnlByCondition)) {
-      if (!livePositionConditionIds.has(cid)) {
-        redeemedOnlyPnl += row.net;
+      if (!liveIds.has(cid)) {
+        redeemedPnl += row.net;
         if (row.net > 0) droppedWinsCount++;
       }
     }
-    const totalCashPnl = positionsPnl + redeemedOnlyPnl;
+    
+    // Step 4: totalPnl = positionsPnl + redeemedPnl
+    const totalCashPnl = positionsPnl + redeemedPnl;
+
+    console.log("--- P&L Breakdown ---");
+    console.log("1. positionsPnl (from positions array):", positionsPnl);
+    console.log("2. redeemedPnl (from dropped activity):", redeemedPnl);
+    console.log("3. Count of dropped/redeemed markets:", droppedWinsCount);
+    console.log("=> totalCashPnl:", totalCashPnl);
+    console.log("-----------------------");
     
     const totalWon = droppedWinsCount + unredeemedWins.length;
     const totalLost = lostPositions.length;
