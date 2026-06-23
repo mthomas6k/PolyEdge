@@ -8,7 +8,7 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
 
 /* ========== HERO TERMINAL BACKGROUND ========== */
 #terminal-bg-container{
-  background:transparent;
+  background:var(--bg);
   text-align:left;
   font-family:'JetBrains Mono','Menlo',monospace;
 }
@@ -275,6 +275,10 @@ body.has-nav-ticker .page{padding-top:88px}
 /* Homepage stays transparent so the galaxy background shows through */
 #page-home.page{background:transparent}
 #page-home.page.active{background:transparent}
+
+/* Challenges page transparent for matrix rain */
+#page-challenges.page{background:transparent}
+#page-challenges.page.active{background:transparent}
 
 .rules-at-a-glance{padding-top:48px;padding-bottom:48px}
 .rules-at-a-glance-lead{color:var(--text2);font-size:15px;line-height:1.6;max-width:640px;margin-bottom:28px}

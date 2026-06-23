@@ -71,15 +71,11 @@ const PM = (() => {
       allActivities = allActivities.concat(firstChunk);
       
       if (firstChunk.length === limit) {
-        const promises = [];
-        for (let i = 1; i < 10; i++) {
-          promises.push(fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=${limit}&offset=${i * limit}`).catch(() => []));
-        }
-        const results = await Promise.all(promises);
-        for (const data of results) {
-          if (!Array.isArray(data) || data.length === 0) break;
-          allActivities = allActivities.concat(data);
-          if (data.length < limit) break;
+        for (let i = 1; i < 30; i++) {
+          const chunk = await fetchWithProxy(`${DATA_API}/activity?user=${wallet}&limit=${limit}&offset=${i * limit}`).catch(() => []);
+          if (!Array.isArray(chunk) || chunk.length === 0) break;
+          allActivities = allActivities.concat(chunk);
+          if (chunk.length < limit) break;
         }
       }
       return allActivities;
@@ -183,31 +179,17 @@ const PM = (() => {
     const totalRealizedPnl = pos.reduce((s, p) => s + n(p, 'realizedPnl', 'realized_pnl'), 0);
     const totalCurrentValue = pos.reduce((s, p) => s + n(p, 'currentValue', 'current_value'), 0);
     const totalCashPnlFieldOnly = pos.reduce((s, p) => s + n(p, 'cashPnl', 'cash_pnl'), 0);
-    /** Final point of cumulative activity P&L gives accurate total since positions API drops redeemed wins. */
-    const totalCashPnl = cumPnl.length > 0 ? cumPnl[cumPnl.length - 1].pnl : 0;
     const totalInitialValue = pos.reduce((s, p) => s + n(p, 'initialValue', 'initial_value'), 0);
 
-    // Win Rate — rebuilt using activity since positions API hides redeemed wins
-    const wonConditionIds = new Set(trades.filter(t => t.type === 'REDEEM' && t.conditionId).map(t => t.conditionId));
-    
-    // Also include any active positions that are currently winning and closed (but unredeemed)
-    const unredeemedWins = pos.filter(p => {
-      const price = n(p, 'curPrice', 'cur_price');
-      return !wonConditionIds.has(p.conditionId) && (positionTotalPnlRow(p) > 0) && (p.redeemable || price >= 0.99);
-    });
-    const totalWon = wonConditionIds.size + unredeemedWins.length;
+    const livePositionConditionIds = new Set(pos.map(p => p.conditionId).filter(Boolean));
 
-    // Remaining positions that are closed and worth ~0 are losses
-    const lostPositions = pos.filter(p => {
+    const resolvedPositions = pos.filter(p => {
       const price = n(p, 'curPrice', 'cur_price');
-      const isClosed = p.redeemable || price <= 0.01;
-      return isClosed && !unredeemedWins.includes(p) && n(p, 'currentValue', 'current_value') <= 0.01;
+      return p.redeemable || price >= 0.99 || price <= 0.01;
     });
-    const totalLost = lostPositions.length;
-    
-    const combinedClosed = totalWon + totalLost;
-    const winRate = combinedClosed > 0 ? (totalWon / combinedClosed * 100) : 0;
-    const closed = lostPositions.concat(unredeemedWins);
+
+    const unredeemedWins = resolvedPositions.filter(p => positionTotalPnlRow(p) > 0);
+    const lostPositions = resolvedPositions.filter(p => positionTotalPnlRow(p) <= 0);
 
     // OPEN positions (Active) — Polymarket includes all positions where you hold shares, even if 0¢ or resolved.
     const open = pos.filter(p => positionDisplaySizeRow(p) >= 0.00001);
@@ -250,6 +232,25 @@ const PM = (() => {
       if (!cid || !pnlByCondition[cid]) return;
       pnlByCondition[cid].net += n(p, 'currentValue', 'current_value');
     });
+
+    // Calculate accurate Total P&L and Win Rate using dropping logic
+    const positionsPnl = pos.reduce((s, p) => s + positionTotalPnlRow(p), 0);
+    let redeemedOnlyPnl = 0;
+    let droppedWinsCount = 0;
+
+    for (const [cid, row] of Object.entries(pnlByCondition)) {
+      if (!livePositionConditionIds.has(cid)) {
+        redeemedOnlyPnl += row.net;
+        if (row.net > 0) droppedWinsCount++;
+      }
+    }
+    const totalCashPnl = positionsPnl + redeemedOnlyPnl;
+    
+    const totalWon = droppedWinsCount + unredeemedWins.length;
+    const totalLost = lostPositions.length;
+    const combinedClosed = totalWon + totalLost;
+    const winRate = combinedClosed > 0 ? (totalWon / combinedClosed * 100) : 0;
+    const closed = lostPositions.concat(unredeemedWins);
 
     const allMarketsPnl = Object.values(pnlByCondition).sort((a, b) => b.net - a.net);
     const top3BestFake = allMarketsPnl.filter(x => x.net > 0).slice(0, 3);
